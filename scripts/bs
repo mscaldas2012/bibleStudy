@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Thin wrapper for the Bible study CLI.
+# Activates the project venv and passes all arguments to the Python CLI.
+
+set -euo pipefail
+
+# Resolve the real script path even when invoked via symlink
+REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(dirname "$REAL_SCRIPT")"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+VENV="$PROJECT_DIR/.venv"
+
+if [[ ! -d "$VENV" ]]; then
+  echo "Error: virtualenv not found at $VENV" >&2
+  echo "Run: $SCRIPT_DIR/install.sh" >&2
+  exit 1
+fi
+
+exec "$VENV/bin/python" -m bible_study "$@"

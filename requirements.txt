@@ -1,0 +1,8 @@
+mlx-lm>=0.18
+anthropic>=0.40
+requests>=2.31
+rich>=13.0
+click>=8.1
+python-dotenv>=1.0
+json-repair>=0.30
+pytest>=8.0
