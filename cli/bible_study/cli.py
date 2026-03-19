@@ -61,6 +61,14 @@ def main(reference: str, save: bool, provider: str | None, no_notify: bool) -> N
     except EnrichmentError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
+    except ValueError as exc:
+        msg = str(exc)
+        click.echo(f"Could not parse reference: {msg}", err=True)
+        click.echo(
+            'Try a book, chapter, or verse — e.g. bs "John 3:16" or bs "Psalm 23"',
+            err=True,
+        )
+        sys.exit(1)
     except Exception as exc:
         click.echo(f"Unexpected error: {exc}", err=True)
         sys.exit(1)
