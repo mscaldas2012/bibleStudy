@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-_DATA_DIR = Path(__file__).parent.parent / "data"
+_DATA_DIR = Path(__file__).parent.parent.parent / "shared"
 
 with (_DATA_DIR / "book_aliases.json").open() as _f:
     _ALIAS_DATA = json.load(_f)

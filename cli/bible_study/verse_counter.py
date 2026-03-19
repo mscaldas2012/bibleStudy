@@ -11,7 +11,7 @@ from pathlib import Path
 
 from bible_study.parser import BibleRef
 
-_DATA_DIR = Path(__file__).parent.parent / "data"
+_DATA_DIR = Path(__file__).parent.parent.parent / "shared"
 
 with (_DATA_DIR / "verse_counts.json").open() as _f:
     VERSE_COUNTS: dict[str, list[int]] = json.load(_f)
