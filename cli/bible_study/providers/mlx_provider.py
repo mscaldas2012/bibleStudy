@@ -22,6 +22,8 @@ class MLXProvider(LLMProvider):
                 "mlx-lm is not installed. Run: pip install mlx-lm"
             ) from exc
 
+        import os
+        os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
         self._model, self._tokenizer = load(self.model_path)
 
     def generate(self, system: str, user: str) -> str:
