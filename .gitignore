@@ -10,3 +10,12 @@ notes/
 dist/
 build/
 .DS_Store
+
+# iOS
+ios/BibleStudy/BibleStudy/Resources/Secrets.plist
+ios/**/*.xcodeproj/xcuserdata/
+ios/**/*.xcworkspace/xcuserdata/
+ios/**/DerivedData/
+ios/**/*.ipa
+ios/**/*.dSYM.zip
+ios/**/*.dSYM
