@@ -13,6 +13,7 @@ build/
 
 # iOS
 ios/BibleStudy/BibleStudy/Resources/Secrets.plist
+ios/Bible\ Reference/Bible\ Reference/Resources/Secrets.plist
 ios/**/*.xcodeproj/xcuserdata/
 ios/**/*.xcworkspace/xcuserdata/
 ios/**/DerivedData/
