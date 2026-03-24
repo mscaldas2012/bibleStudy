@@ -9,9 +9,28 @@ import SwiftUI
 
 @main
 struct Bible_ReferenceApp: App {
+    @State private var showSplash = true
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ZStack {
+                // ContentView loads in the background so it's ready when splash fades
+                ContentView()
+                    .opacity(showSplash ? 0 : 1)
+
+                if showSplash {
+                    SplashView()
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                    withAnimation(.easeOut(duration: 0.6)) {
+                        showSplash = false
+                    }
+                }
+            }
         }
     }
 }
