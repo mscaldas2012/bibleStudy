@@ -21,6 +21,11 @@ struct DetailView: View {
                     }
                     .buttonStyle(.borderedProminent)
                 }
+            } else if !viewModel.topicCandidates.isEmpty {
+                TopicCandidateView(
+                    topic: viewModel.referenceInput,
+                    candidates: viewModel.topicCandidates
+                )
             } else if let note = viewModel.currentNote {
                 StudyNoteView(note: note)
             } else {
@@ -33,12 +38,15 @@ struct DetailView: View {
         }
         .navigationTitle(viewModel.currentNote?.reference.displayTitle ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(for: String.self) { refString in
+            CrossRefPassageView(referenceString: refString)
+        }
     }
 }
 
 // MARK: - Loading indicator
 
-private struct LoadingView: View {
+struct LoadingView: View {
     let phase: StudyViewModel.LoadingPhase
 
     var body: some View {

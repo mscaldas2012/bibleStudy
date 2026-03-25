@@ -100,6 +100,26 @@ actor FoundationModelService {
         }
     }
 
+    // MARK: - Section 4: Topic Resolution
+
+    func resolvePassage(topic: String) async throws -> TopicResolution {
+        guard SystemLanguageModel.default.isAvailable else {
+            throw AppError.modelUnavailable
+        }
+        let session = LanguageModelSession(instructions: instructions)
+        let prompt = "Ancient literature topic or named passage: \(topic)"
+        do {
+            return try await session.respond(to: prompt, generating: TopicResolution.self).content
+        } catch let error as LanguageModelSession.GenerationError where error.isGuardrail {
+            return try await retry(
+                prompt: "List the ancient text references for the passage known as: \(topic)",
+                generating: TopicResolution.self
+            )
+        } catch {
+            throw AppError.modelGenerationFailed(error.localizedDescription)
+        }
+    }
+
     // MARK: - Private helpers
 
     private func basePrompt(reference: BibleReference, verseText: String?) -> String {

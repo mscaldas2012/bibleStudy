@@ -14,6 +14,7 @@ final class StudyViewModel {
 
     // MARK: - Output
     var currentNote: StudyNote?
+    var topicCandidates: [String] = []   // non-empty = show passage picker
 
     // MARK: - State
     var isLoading: Bool = false
@@ -22,25 +23,21 @@ final class StudyViewModel {
 
     // MARK: - Services
     private let speechService = SpeechService()
-    private var esvService: ESVService?
     private let modelService = FoundationModelService()
     private let tskService = TSKService()
 
     enum LoadingPhase {
-        case idle, parsingReference, fetchingText, generatingInsights
+        case idle, parsingReference, resolvingTopic, fetchingText, generatingInsights
 
         var label: String {
             switch self {
             case .idle: return ""
             case .parsingReference: return "Parsing reference…"
+            case .resolvingTopic: return "Finding passage…"
             case .fetchingText: return "Fetching ESV text…"
             case .generatingInsights: return "Generating insights…"
             }
         }
-    }
-
-    init() {
-        esvService = try? ESVService(apiKey: SecretsLoader.esvAPIKey())
     }
 
     // MARK: - Study
@@ -52,15 +49,28 @@ final class StudyViewModel {
         error = nil
         isLoading = true
         currentNote = nil
+        topicCandidates = []
 
         do {
-            // 1. Parse reference
+            // 1. Parse reference — if it fails, treat input as a topic and resolve via FM
             loadingPhase = .parsingReference
             let ref: BibleReference
             do {
                 ref = try parseBibleReference(trimmed)
-            } catch let e as ParseError {
-                throw AppError.parseFailure(e.errorDescription ?? e.localizedDescription)
+            } catch {
+                loadingPhase = .resolvingTopic
+                let resolution = try await modelService.resolvePassage(topic: trimmed)
+                let valid = resolution.references.filter { (try? parseBibleReference($0)) != nil }
+                if valid.isEmpty {
+                    throw AppError.parseFailure("Could not find a passage for \"\(trimmed)\". Try a direct reference like \"Luke 15:11-32\".")
+                } else if valid.count == 1 {
+                    ref = try parseBibleReference(valid[0])
+                } else {
+                    isLoading = false
+                    loadingPhase = .idle
+                    topicCandidates = valid
+                    return
+                }
             }
 
             // 2. Fetch cross-references from TSK (offline, instant)
@@ -68,10 +78,15 @@ final class StudyViewModel {
 
             // 3. Fetch ESV text if applicable
             var verseText: String? = nil
+            var esvKeyMissing = false
             if ref.shouldShowText {
-                loadingPhase = .fetchingText
-                guard let svc = esvService else { throw AppError.esvMissingKey }
-                verseText = try await svc.fetchPassage(for: ref)
+                if let key = KeychainService.loadESVKey(), !key.isEmpty {
+                    loadingPhase = .fetchingText
+                    let svc = ESVService(apiKey: key)
+                    verseText = try? await svc.fetchPassage(for: ref)
+                } else {
+                    esvKeyMissing = true
+                }
             }
 
             // Show all cards immediately with spinners — content fills in as each call completes
@@ -82,7 +97,8 @@ final class StudyViewModel {
                 context: "",
                 applications: [],
                 historicalBackground: "",
-                crossReferences: []
+                crossReferences: [],
+                esvKeyMissing: esvKeyMissing
             )
             isLoading = false
             loadingPhase = .idle
@@ -121,6 +137,12 @@ final class StudyViewModel {
             loadingPhase = .idle
             self.error = .modelGenerationFailed(error.localizedDescription)
         }
+    }
+
+    func selectCandidate(_ referenceString: String) async {
+        topicCandidates = []
+        referenceInput = referenceString
+        await submit()
     }
 
     // MARK: - Speech passthrough

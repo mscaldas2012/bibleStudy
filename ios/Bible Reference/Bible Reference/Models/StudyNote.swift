@@ -23,6 +23,12 @@ struct HistoricalAnalysis {
 }
 
 @Generable
+struct TopicResolution {
+    @Guide(description: "Exact Bible references for this named passage or topic. Use format 'Book Chapter:Verse-Verse' (e.g. 'Luke 15:11-32'). If the topic appears in multiple books (synoptic parallels, parallel accounts), include all occurrences. Return only references, no explanations.")
+    var references: [String]
+}
+
+@Generable
 struct CrossRefAnalysis {
     @Guide(description: "For each cross-reference listed in the prompt (in the same order), write exactly one sentence explaining how it connects to the current passage. Return the same number of explanations as cross-references provided.")
     var crossRefExplanations: [String]
@@ -41,5 +47,6 @@ struct StudyNote: Identifiable {
     var historicalBackground: String        // empty until history call completes
     var crossReferences: [CrossRef]         // empty until cross-ref call completes
     var crossRefsLoaded: Bool = false       // true once cross-ref phase finishes (even if 0 refs)
+    var esvKeyMissing: Bool = false
     let createdAt: Date = .now
 }

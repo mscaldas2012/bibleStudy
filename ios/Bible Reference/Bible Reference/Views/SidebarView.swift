@@ -7,6 +7,7 @@ import Speech
 struct SidebarView: View {
     @Environment(StudyViewModel.self) private var viewModel
     @FocusState private var fieldFocused: Bool
+    @State private var showSettings = false
 
     var body: some View {
         @Bindable var vm = viewModel
@@ -98,6 +99,14 @@ struct SidebarView: View {
             .padding()
         }
         .task { await viewModel.requestSpeechPermission() }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { showSettings = true } label: {
+                    Image(systemName: "gear")
+                }
+            }
+        }
+        .sheet(isPresented: $showSettings) { SettingsView() }
     }
 }
 

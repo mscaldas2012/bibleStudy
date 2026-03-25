@@ -14,6 +14,8 @@ struct StudyNoteView: View {
                 // Verse text (short passages only)
                 if let text = note.verseText {
                     VerseTextCard(text: text)
+                } else if note.esvKeyMissing {
+                    ESVKeyPromptCard()
                 }
 
                 // Context
@@ -109,6 +111,30 @@ private struct VerseTextCard: View {
     }
 }
 
+// MARK: - ESV key prompt card
+
+private struct ESVKeyPromptCard: View {
+    @State private var showSettings = false
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Add your free ESV API key to view passage text.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Button("Open Settings") { showSettings = true }
+                    .buttonStyle(.bordered)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Label("ESV", systemImage: "text.book.closed")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+        }
+        .sheet(isPresented: $showSettings) { SettingsView() }
+    }
+}
+
 // MARK: - Generic study card
 
 private struct StudyCard<Content: View>: View {
@@ -175,17 +201,32 @@ private struct CrossReferencesCard: View {
                 if !loaded {
                     SectionLoadingView()
                 } else {
-                    VStack(alignment: .leading, spacing: 14) {
-                        ForEach(refs) { ref in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(ref.reference)
-                                    .font(.headline)
-                                if !ref.explanation.isEmpty {
-                                    Text(ref.explanation)
-                                        .font(.body)
-                                        .foregroundStyle(.secondary)
-                                        .lineSpacing(4)
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(refs.enumerated()), id: \.element.id) { idx, ref in
+                            NavigationLink(value: ref.reference) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text(ref.reference)
+                                            .font(.headline)
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    if !ref.explanation.isEmpty {
+                                        Text(ref.explanation)
+                                            .font(.body)
+                                            .foregroundStyle(.secondary)
+                                            .lineSpacing(4)
+                                    }
                                 }
+                                .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
+
+                            if idx < refs.count - 1 {
+                                Divider()
                             }
                         }
                     }
