@@ -25,7 +25,9 @@ struct StudyNoteView: View {
                     accentColor: .blue,
                     aiGenerated: true
                 ) {
-                    if note.context.isEmpty {
+                    if let err = note.contextError {
+                        AIErrorView(message: err)
+                    } else if note.context.isEmpty {
                         SectionLoadingView()
                     } else {
                         Text(note.context)
@@ -43,7 +45,9 @@ struct StudyNoteView: View {
                     accentColor: .orange,
                     aiGenerated: true
                 ) {
-                    if note.applications.isEmpty {
+                    if note.contextError != nil {
+                        EmptyView() // error already shown in Context card above
+                    } else if note.applications.isEmpty {
                         SectionLoadingView()
                     } else {
                         VStack(alignment: .leading, spacing: 14) {
@@ -66,10 +70,10 @@ struct StudyNoteView: View {
                 .animation(.easeIn(duration: 0.4), value: note.applications.isEmpty)
 
                 // Historical background — shows spinner until content arrives
-                HistoricalBackgroundCard(text: note.historicalBackground)
+                HistoricalBackgroundCard(text: note.historicalBackground, error: note.historyError)
 
                 // Cross-references — shows spinner until cross-ref phase finishes
-                CrossReferencesCard(refs: note.crossReferences, loaded: note.crossRefsLoaded)
+                CrossReferencesCard(refs: note.crossReferences, loaded: note.crossRefsLoaded, error: note.crossRefError)
 
                 // Disclaimer
                 HStack(alignment: .top, spacing: 6) {
@@ -167,6 +171,7 @@ private struct StudyCard<Content: View>: View {
 
 private struct HistoricalBackgroundCard: View {
     let text: String
+    var error: String? = nil
 
     var body: some View {
         StudyCard(
@@ -175,7 +180,9 @@ private struct HistoricalBackgroundCard: View {
             accentColor: Color(red: 0.6, green: 0.35, blue: 0.1),
             aiGenerated: true
         ) {
-            if text.isEmpty {
+            if let err = error {
+                AIErrorView(message: err)
+            } else if text.isEmpty {
                 SectionLoadingView()
             } else {
                 Text(text)
@@ -193,6 +200,7 @@ private struct HistoricalBackgroundCard: View {
 private struct CrossReferencesCard: View {
     let refs: [CrossRef]
     let loaded: Bool    // true once the cross-ref phase is done (refs may still be empty)
+    var error: String? = nil
 
     var body: some View {
         // Hide only after loading finishes and TSK found nothing
@@ -200,6 +208,9 @@ private struct CrossReferencesCard: View {
             StudyCard(icon: "link", title: "Cross-References", accentColor: .green, aiGenerated: true) {
                 if !loaded {
                     SectionLoadingView()
+                } else if let err = error, refs.allSatisfy({ $0.explanation.isEmpty }) {
+                    // Show error only if we have no explanations at all
+                    AIErrorView(message: err)
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(refs.enumerated()), id: \.element.id) { idx, ref in
@@ -235,6 +246,25 @@ private struct CrossReferencesCard: View {
             }
             .animation(.easeIn(duration: 0.4), value: loaded)
         }
+    }
+}
+
+// MARK: - Inline AI error
+
+private struct AIErrorView: View {
+    let message: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+                .font(.subheadline)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
     }
 }
 

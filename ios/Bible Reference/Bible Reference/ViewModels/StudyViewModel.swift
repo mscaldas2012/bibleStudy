@@ -119,27 +119,36 @@ final class StudyViewModel {
             await Task.yield()
 
             // 4a. Context + applications
-            if let result = try? await bibleAI.analyzeContext(reference: ref, verseText: verseText) {
+            do {
+                let result = try await bibleAI.analyzeContext(reference: ref, verseText: verseText)
                 currentNote?.context = result.context
                 currentNote?.applications = result.applications
+            } catch {
+                currentNote?.contextError = error.localizedDescription
             }
 
             // 4b. Historical background
-            if let result = try? await bibleAI.analyzeHistory(reference: ref, verseText: verseText) {
+            do {
+                let result = try await bibleAI.analyzeHistory(reference: ref, verseText: verseText)
                 currentNote?.historicalBackground = result.historicalBackground
+            } catch {
+                currentNote?.historyError = error.localizedDescription
             }
 
             // 4c. Cross-reference explanations
-            // Set refs from TSK first so the card always appears, even if AI explanation fails
+            // Always set refs from TSK so the card appears; AI explanations layer in on top
             if !crossRefs.isEmpty {
                 currentNote?.crossReferences = crossRefs
                 await Task.yield()
-                if let result = try? await bibleAI.analyzeCrossRefs(reference: ref, crossRefs: crossRefs) {
+                do {
+                    let result = try await bibleAI.analyzeCrossRefs(reference: ref, crossRefs: crossRefs)
                     var refs = crossRefs
                     for i in refs.indices where i < result.crossRefExplanations.count {
                         refs[i].explanation = result.crossRefExplanations[i]
                     }
                     currentNote?.crossReferences = refs
+                } catch {
+                    currentNote?.crossRefError = error.localizedDescription
                 }
             }
             currentNote?.crossRefsLoaded = true

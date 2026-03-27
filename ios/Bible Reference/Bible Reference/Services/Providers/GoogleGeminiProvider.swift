@@ -22,9 +22,25 @@ struct GoogleGeminiProvider: LLMProvider {
             : config.baseURL
     }
 
+    // Disable all safety filters — Gemini blocks religious/biblical content by default,
+    // which causes the `content` field to be absent from the response and silently
+    // fails every Bible study call.
+    private var safetySettings: [[String: Any]] {
+        let categories = [
+            "HARM_CATEGORY_HARASSMENT",
+            "HARM_CATEGORY_HATE_SPEECH",
+            "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "HARM_CATEGORY_CIVIC_INTEGRITY",
+        ]
+        return categories.map { ["category": $0, "threshold": "BLOCK_NONE"] }
+    }
+
     func chat(systemPrompt: String, userPrompt: String) async throws -> String {
         let urlStr = "\(baseURL)/v1beta/models/\(config.model):generateContent?key=\(apiKey)"
-        let url = URL(string: urlStr)!
+        guard let url = URL(string: urlStr) else {
+            throw LLMError.httpError(0, "Invalid URL — check the model name and base URL.")
+        }
         var req = URLRequest(url: url, timeoutInterval: 60)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "content-type")
@@ -32,7 +48,8 @@ struct GoogleGeminiProvider: LLMProvider {
         let body: [String: Any] = [
             "system_instruction": ["parts": [["text": systemPrompt]]],
             "contents": [["role": "user", "parts": [["text": userPrompt]]]],
-            "generationConfig": ["maxOutputTokens": 1024]
+            "safetySettings": safetySettings,
+            "generationConfig": ["maxOutputTokens": 2048]
         ]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -43,24 +60,47 @@ struct GoogleGeminiProvider: LLMProvider {
             throw mapHTTPError(statusCode: http.statusCode, body: bodyStr, model: config.model)
         }
 
+        // `content` is Optional — Gemini omits it when a safety filter fires.
         struct Resp: Decodable {
             struct Candidate: Decodable {
                 struct Content: Decodable {
                     struct Part: Decodable { let text: String }
                     let parts: [Part]
                 }
-                let content: Content
+                let content: Content?       // absent on safety block
+                let finishReason: String?
             }
-            let candidates: [Candidate]
+            let candidates: [Candidate]?
+            struct PromptFeedback: Decodable { let blockReason: String? }
+            let promptFeedback: PromptFeedback?
         }
+
         let decoded = try JSONDecoder().decode(Resp.self, from: data)
-        return decoded.candidates.first?.content.parts.first?.text ?? ""
+
+        // Surface prompt-level blocks (e.g. the input itself was refused)
+        if let reason = decoded.promptFeedback?.blockReason {
+            throw LLMError.httpError(200, "Prompt blocked by Gemini safety filter: \(reason)")
+        }
+
+        guard let candidate = decoded.candidates?.first else {
+            throw LLMError.httpError(200, "Gemini returned no candidates.")
+        }
+
+        // Surface candidate-level blocks
+        if candidate.content == nil {
+            let reason = candidate.finishReason ?? "unknown"
+            throw LLMError.httpError(200, "Gemini content blocked (finishReason: \(reason)).")
+        }
+
+        return candidate.content?.parts.first?.text ?? ""
     }
 
     func verify() async throws -> String {
         // GET /v1beta/models?key=<apiKey> — lists models, confirms auth
         let urlStr = "\(baseURL)/v1beta/models?key=\(apiKey)"
-        let url = URL(string: urlStr)!
+        guard let url = URL(string: urlStr) else {
+            throw LLMError.httpError(0, "Invalid URL.")
+        }
         let req = URLRequest(url: url, timeoutInterval: 20)
 
         let (data, resp) = try await URLSession.shared.safeData(for: req)
