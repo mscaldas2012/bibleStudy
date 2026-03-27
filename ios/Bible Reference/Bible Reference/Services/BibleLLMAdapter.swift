@@ -85,14 +85,20 @@ final class BibleLLMAdapter {
         crossRefs: [CrossRef]
     ) async throws -> CrossRefAnalysis {
         guard !crossRefs.isEmpty else { return CrossRefAnalysis(crossRefExplanations: []) }
-        let refList = crossRefs.map(\.reference).joined(separator: " | ")
+        // Cap at 8 to keep output tokens predictable across all providers
+        let limited = Array(crossRefs.prefix(8))
+        let refList = limited.enumerated()
+            .map { "\($0.offset + 1). \($0.element.reference)" }
+            .joined(separator: "\n")
         let prompt = """
             Main passage: \(reference.displayTitle)
-            Cross-references (in order): \(refList)
-            For each cross-reference write exactly one sentence explaining how it connects \
-            to the main passage. Return JSON exactly: \
-            {"crossRefExplanations": ["explanation 1", "explanation 2", ...]}. \
-            Return the same number of explanations as cross-references provided.
+            Cross-references:
+            \(refList)
+
+            For each numbered cross-reference above, write one sentence explaining how it \
+            connects to the main passage. Return JSON exactly:
+            {"crossRefExplanations": ["sentence for 1", "sentence for 2", ...]}
+            The array must have exactly \(limited.count) strings, one per cross-reference, in order.
             """
         let text = try await provider.chat(systemPrompt: system, userPrompt: prompt)
         let json = try parseProviderJSON(text, as: CrossRefJSON.self)

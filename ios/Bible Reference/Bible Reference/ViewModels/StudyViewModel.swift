@@ -130,13 +130,17 @@ final class StudyViewModel {
             }
 
             // 4c. Cross-reference explanations
-            if !crossRefs.isEmpty,
-               let result = try? await bibleAI.analyzeCrossRefs(reference: ref, crossRefs: crossRefs) {
-                var refs = crossRefs
-                for i in refs.indices where i < result.crossRefExplanations.count {
-                    refs[i].explanation = result.crossRefExplanations[i]
+            // Set refs from TSK first so the card always appears, even if AI explanation fails
+            if !crossRefs.isEmpty {
+                currentNote?.crossReferences = crossRefs
+                await Task.yield()
+                if let result = try? await bibleAI.analyzeCrossRefs(reference: ref, crossRefs: crossRefs) {
+                    var refs = crossRefs
+                    for i in refs.indices where i < result.crossRefExplanations.count {
+                        refs[i].explanation = result.crossRefExplanations[i]
+                    }
+                    currentNote?.crossReferences = refs
                 }
-                currentNote?.crossReferences = refs
             }
             currentNote?.crossRefsLoaded = true
 
