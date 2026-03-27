@@ -1,0 +1,155 @@
+/// LLMProviderSettingsView.swift
+/// Main screen for managing LLM provider configurations.
+
+import SwiftUI
+
+struct LLMProviderSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var store = LLMProviderStore.shared
+    @State private var showAddSheet: ProviderType? = nil
+    @State private var editConfig: LLMProviderConfig? = nil
+
+    var body: some View {
+        NavigationStack {
+            List {
+                // MARK: Active section
+                Section {
+                    HStack {
+                        Image(systemName: activeIconName)
+                            .foregroundStyle(.blue)
+                            .frame(width: 28)
+                        VStack(alignment: .leading) {
+                            Text(store.activeDisplayName)
+                                .fontWeight(.semibold)
+                            if let cfg = store.activeConfig {
+                                Text(cfg.model)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Runs entirely on your device — no API key required")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        if store.activeConfig != nil {
+                            Button("Reset") { store.deactivate() }
+                                .font(.caption)
+                                .buttonStyle(.bordered)
+                        }
+                    }
+                } header: { Text("Active Provider") }
+
+                // MARK: Saved providers
+                if !store.configs.isEmpty {
+                    Section {
+                        ForEach(store.configs) { cfg in
+                            ProviderRow(cfg: cfg,
+                                        isActive: cfg.id == store.activeId,
+                                        onActivate: { store.activate(cfg.id) },
+                                        onEdit: { editConfig = cfg })
+                        }
+                        .onDelete { offsets in
+                            offsets.map { store.configs[$0] }.forEach { store.remove($0) }
+                        }
+                    } header: { Text("Saved Providers") }
+                      footer: { Text("Swipe left to delete. Tap to set active.") }
+                }
+
+                // MARK: Add provider
+                Section {
+                    Menu {
+                        Button {
+                            showAddSheet = .anthropic
+                        } label: {
+                            Label("Anthropic Claude", systemImage: "sparkles")
+                        }
+                        Button {
+                            showAddSheet = .openAI
+                        } label: {
+                            Label("OpenAI", systemImage: "brain")
+                        }
+                        Button {
+                            showAddSheet = .googleGemini
+                        } label: {
+                            Label("Google Gemini", systemImage: "circle.hexagongrid")
+                        }
+                        Divider()
+                        Button {
+                            showAddSheet = .custom
+                        } label: {
+                            Label("Custom / Advanced", systemImage: "server.rack")
+                        }
+                    } label: {
+                        Label("Add Provider", systemImage: "plus.circle.fill")
+                            .foregroundStyle(.blue)
+                    }
+                }
+            }
+            .navigationTitle("AI Provider")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .sheet(item: $showAddSheet) { type in
+                providerSetupView(for: type)
+            }
+            .sheet(item: $editConfig) { cfg in
+                providerSetupView(for: cfg.type, editing: cfg)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func providerSetupView(for type: ProviderType, editing cfg: LLMProviderConfig? = nil) -> some View {
+        switch type {
+        case .anthropic:       AnthropicSetupView(editing: cfg)
+        case .openAI:          OpenAISetupView(editing: cfg)
+        case .googleGemini:    GoogleGeminiSetupView(editing: cfg)
+        case .custom:          CustomProviderSetupView(editing: cfg)
+        case .appleFoundation: EmptyView()
+        }
+    }
+
+    private var activeIconName: String {
+        store.activeConfig?.type.systemIconName ?? "iphone"
+    }
+}
+
+// MARK: - Provider row
+
+private struct ProviderRow: View {
+    let cfg: LLMProviderConfig
+    let isActive: Bool
+    let onActivate: () -> Void
+    let onEdit: () -> Void
+
+    var body: some View {
+        HStack {
+            Image(systemName: cfg.type.systemIconName)
+                .foregroundStyle(isActive ? .blue : .secondary)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(cfg.displayName)
+                    .fontWeight(isActive ? .semibold : .regular)
+                Text(cfg.model)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if isActive {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.blue)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { onActivate() }
+        .swipeActions(edge: .leading) {
+            Button("Edit") { onEdit() }.tint(.blue)
+        }
+    }
+}
+
+// ProviderType already conforms to Identifiable via its `id` property in LLMProviderConfig.swift
