@@ -4,7 +4,6 @@
 
 import Foundation
 import Observation
-import Speech
 
 @Observable
 final class StudyViewModel {
@@ -22,9 +21,12 @@ final class StudyViewModel {
     var error: AppError?
 
     // MARK: - Services
-    private let speechService = SpeechService()
     private let modelService = FoundationModelService()
     private let tskService = TSKService()
+
+    // MARK: - History helpers (cleared at start of each submit)
+    private var pendingHistoryQuery: String = ""      // original typed query to show in history
+    private var pendingHistoryTitle: String = ""      // canonical display title (set after ref is resolved)
 
     enum LoadingPhase {
         case idle, parsingReference, resolvingTopic, fetchingText, generatingInsights
@@ -45,6 +47,11 @@ final class StudyViewModel {
     func submit() async {
         let trimmed = referenceInput.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
+
+        // Capture pending history context set by selectCandidate / submitHistory, then clear
+        let historyQuery = pendingHistoryQuery.isEmpty ? trimmed : pendingHistoryQuery
+        pendingHistoryQuery = ""
+        pendingHistoryTitle = ""
 
         error = nil
         isLoading = true
@@ -68,6 +75,7 @@ final class StudyViewModel {
                 } else {
                     isLoading = false
                     loadingPhase = .idle
+                    pendingHistoryQuery = historyQuery // preserve for selectCandidate
                     topicCandidates = valid
                     return
                 }
@@ -88,6 +96,9 @@ final class StudyViewModel {
                     esvKeyMissing = true
                 }
             }
+
+            // Record history — query is what user typed, displayTitle is the canonical passage
+            HistoryStore.shared.add(query: historyQuery, displayTitle: ref.displayTitle)
 
             // Show all cards immediately with spinners — content fills in as each call completes
             loadingPhase = .generatingInsights
@@ -140,33 +151,18 @@ final class StudyViewModel {
     }
 
     func selectCandidate(_ referenceString: String) async {
+        // pendingHistoryQuery was preserved from submit() when candidates were set
+        // so historyQuery in the next submit() will use the original typed text
         topicCandidates = []
         referenceInput = referenceString
         await submit()
     }
 
-    // MARK: - Speech passthrough
-
-    var isSpeechRecording: Bool { speechService.isRecording }
-    var isSpeechSupported: Bool { speechService.isSupported }
-    var speechPermission: SFSpeechRecognizerAuthorizationStatus { speechService.permissionStatus }
-    var speechError: String? { speechService.error }
-
-    func requestSpeechPermission() async {
-        await speechService.requestPermission()
+    /// Re-run a history entry: display text stays as-is, lookup uses the canonical title.
+    func submitHistory(_ entry: HistoryEntry) async {
+        pendingHistoryQuery = entry.query        // preserve original typed text
+        referenceInput = entry.displayTitle      // look up the canonical passage directly
+        await submit()
     }
 
-    func toggleRecording() {
-        if speechService.isRecording {
-            speechService.stopRecording()
-            if !speechService.transcript.isEmpty {
-                referenceInput = speechService.transcript
-            }
-        } else {
-            try? speechService.startRecording()
-        }
-    }
-
-    /// Live transcript while recording — bind to show real-time feedback.
-    var liveTranscript: String { speechService.transcript }
 }
