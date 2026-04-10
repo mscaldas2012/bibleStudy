@@ -30,9 +30,7 @@ struct StudyNoteView: View {
                     } else if note.context.isEmpty {
                         SectionLoadingView()
                     } else {
-                        Text(note.context)
-                            .font(.body)
-                            .lineSpacing(5)
+                        SelectableText(text: note.context)
                             .transition(.opacity)
                     }
                 }
@@ -58,9 +56,7 @@ struct StudyNoteView: View {
                                         .foregroundStyle(.white)
                                         .frame(width: 26, height: 26)
                                         .background(.orange, in: .circle)
-                                    Text(app)
-                                        .font(.body)
-                                        .lineSpacing(4)
+                                    SelectableText(text: app, lineSpacing: 4)
                                 }
                             }
                         }
@@ -87,7 +83,6 @@ struct StudyNoteView: View {
                 .padding(.top, 4)
             }
             .padding()
-            .textSelection(.enabled)
         }
     }
 }
@@ -100,10 +95,7 @@ private struct VerseTextCard: View {
     var body: some View {
         GroupBox {
             ScrollView {
-                Text(text)
-                    .font(.body)
-                    .italic()
-                    .lineSpacing(6)
+                SelectableText(text: text, lineSpacing: 6, italic: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 4)
             }
@@ -186,9 +178,7 @@ private struct HistoricalBackgroundCard: View {
             } else if text.isEmpty {
                 SectionLoadingView()
             } else {
-                Text(text)
-                    .font(.body)
-                    .lineSpacing(5)
+                SelectableText(text: text)
                     .transition(.opacity)
             }
         }
@@ -227,10 +217,7 @@ private struct CrossReferencesCard: View {
                                             .foregroundStyle(.tertiary)
                                     }
                                     if !ref.explanation.isEmpty {
-                                        Text(ref.explanation)
-                                            .font(.body)
-                                            .foregroundStyle(.secondary)
-                                            .lineSpacing(4)
+                                        SelectableText(text: ref.explanation, lineSpacing: 4, color: .secondaryLabel)
                                     }
                                 }
                                 .padding(.vertical, 8)
