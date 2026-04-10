@@ -24,6 +24,7 @@ struct Bible_ReferenceApp: App {
                         .zIndex(1)
                 }
             }
+            .environment(StreakStore.shared)
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
                     withAnimation(.easeOut(duration: 0.6)) {
