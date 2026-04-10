@@ -123,8 +123,9 @@ final class StudyViewModel {
                 }
             }
 
-            // Record history
+            // Record history and streak
             HistoryStore.shared.add(query: historyQuery, displayTitle: ref.displayTitle)
+            StreakStore.shared.recordLookup()
 
             // Show all cards immediately with spinners — content fills in as each call completes
             loadingPhase = .generatingInsights

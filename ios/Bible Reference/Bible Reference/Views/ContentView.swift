@@ -9,8 +9,13 @@ struct ContentView: View {
     @State private var showDetail = false           // iPhone: whether DetailView is pushed
     @State private var detailPath = NavigationPath() // tracks cross-ref drill depth
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(StreakStore.self) private var streakStore
+    @AppStorage("has_seen_welcome_v1") private var hasSeenWelcome = false
+    @State private var showWelcome = false
 
     var body: some View {
+        @Bindable var streakStore = streakStore
+
         Group {
             if sizeClass == .compact {
                 // iPhone: NavigationStack — push DetailView when a lookup starts
@@ -44,5 +49,21 @@ struct ContentView: View {
         }
         .environment(viewModel)
         .environment(HistoryStore.shared)
+        // Celebration is blocked while the welcome sheet is visible.
+        // When welcome dismisses, pendingCelebration is still set → sheet surfaces automatically.
+        .sheet(item: Binding(
+            get: { showWelcome ? nil : streakStore.pendingCelebration },
+            set: { if $0 == nil { streakStore.dismissCelebration() } }
+        )) { info in
+            CelebrationView(info: info)
+        }
+        .sheet(isPresented: $showWelcome) {
+            WelcomeView()
+        }
+        .onAppear {
+            if !hasSeenWelcome {
+                showWelcome = true
+            }
+        }
     }
 }

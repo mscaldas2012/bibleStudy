@@ -9,8 +9,31 @@ struct SettingsView: View {
     @State private var isKeyStored = false
     @State private var saveStatus: SaveStatus = .idle
     @State private var showProviderSettings = false
+    @State private var showAbout = false
 
     enum SaveStatus { case idle, saved }
+
+    private var streakStatusRow: some View {
+        let streak = StreakStore.shared.data
+        return HStack {
+            Label("Current streak", systemImage: "calendar")
+            Spacer()
+            HStack(spacing: 6) {
+                Text("\(streak.currentStreak) day\(streak.currentStreak == 1 ? "" : "s")")
+                    .foregroundStyle(.secondary)
+                if streak.longestStreak > streak.currentStreak {
+                    Text("· best \(streak.longestStreak)")
+                        .foregroundStyle(.secondary)
+                }
+                if streak.freezeTokens > 0 {
+                    Label("\(streak.freezeTokens)", systemImage: "snowflake")
+                        .foregroundStyle(.blue)
+                        .font(.caption)
+                }
+            }
+            .font(.caption)
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -25,6 +48,21 @@ struct SettingsView: View {
                             Text(LLMProviderStore.shared.activeDisplayName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                }
+
+                Section {
+                    Button {
+                        showAbout = true
+                    } label: {
+                        HStack {
+                            Label("About Daily Kairos", systemImage: "info.circle")
+                            Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -58,6 +96,20 @@ struct SettingsView: View {
                     Label("Key saved securely.", systemImage: "checkmark.circle")
                         .foregroundStyle(.green)
                 }
+
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { !StreakStore.shared.data.suppressCelebrations },
+                        set: { StreakStore.shared.setSuppressCelebrations(!$0) }
+                    )) {
+                        Label("Show Streak Celebrations", systemImage: "flame")
+                    }
+                    streakStatusRow
+                } header: {
+                    Text("Streak")
+                } footer: {
+                    Text("A celebration appears on your first daily lookup once your streak reaches 3 or more days.")
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -83,6 +135,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showProviderSettings) {
                 LLMProviderSettingsView()
+            }
+            .sheet(isPresented: $showAbout) {
+                WelcomeView()
             }
         }
     }
