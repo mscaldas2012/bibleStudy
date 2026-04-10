@@ -83,6 +83,7 @@ struct StudyNoteView: View {
                 .padding(.top, 4)
             }
             .padding()
+            .textSelection(.enabled)
         }
     }
 }
