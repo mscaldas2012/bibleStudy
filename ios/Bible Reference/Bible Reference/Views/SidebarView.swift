@@ -1,13 +1,15 @@
 /// SidebarView.swift
-/// Left panel: reference input with keyboard and microphone support.
+/// Left panel: reference input with keyboard, Bible picker, and microphone support.
 
 import SwiftUI
 import Speech
 
 struct SidebarView: View {
     @Environment(StudyViewModel.self) private var viewModel
+    @Environment(HistoryStore.self) private var history
     @FocusState private var fieldFocused: Bool
     @State private var showSettings = false
+    @State private var showBiblePicker = false
 
     var body: some View {
         @Bindable var vm = viewModel
@@ -18,7 +20,7 @@ struct SidebarView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Bible Study")
                         .font(.largeTitle.bold())
-                    Text("Enter a reference to begin")
+                    Text("Enter a reference or passage name")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -41,23 +43,33 @@ struct SidebarView: View {
                                 Task { await viewModel.submit() }
                             }
 
+                        // Bible picker button
+                        Button {
+                            fieldFocused = false
+                            showBiblePicker = true
+                        } label: {
+                            Image(systemName: "book.closed")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 36, height: 36)
+                                .background(.quaternary, in: .circle)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Browse books, chapters, and verses")
+
+                        // Microphone button (iOS only)
+                        #if !targetEnvironment(macCatalyst) && !os(macOS)
                         MicButton()
+                        #endif
                     }
 
-                    // Live transcript while recording
+                    // Live transcript preview while recording
                     if viewModel.isSpeechRecording, !viewModel.liveTranscript.isEmpty {
                         Text(viewModel.liveTranscript)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .italic()
                             .transition(.opacity)
-                    }
-
-                    // Speech error
-                    if let speechError = viewModel.speechError {
-                        Text(speechError)
-                            .font(.caption)
-                            .foregroundStyle(.red)
                     }
                 }
 
@@ -76,29 +88,31 @@ struct SidebarView: View {
                     || viewModel.isLoading
                 )
 
-                // Tip
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Examples")
-                        .font(.caption.bold())
-                        .foregroundStyle(.secondary)
-
-                    ForEach(["John 3:16", "Psalm 23", "Matthew 5:3-12", "Romans 8"], id: \.self) { example in
-                        Button(example) {
-                            vm.referenceInput = example
-                            fieldFocused = false
-                            Task { await viewModel.submit() }
-                        }
-                        .font(.caption)
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Color.accentColor)
+                // History or examples
+                if history.entries.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ExampleGroup(
+                            label: "By reference",
+                            examples: ["John 3:16", "Psalm 23", "Romans 8", "Matthew 5:3-12"]
+                        )
+                        ExampleGroup(
+                            label: "By name",
+                            examples: [
+                                "The Shema",
+                                "Prodigal Son",
+                                "Sermon on the Mount",
+                                "Lord's Prayer",
+                            ]
+                        )
                     }
+                } else {
+                    HistoryList()
                 }
 
                 Spacer()
             }
             .padding()
         }
-        .task { await viewModel.requestSpeechPermission() }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { showSettings = true } label: {
@@ -107,22 +121,23 @@ struct SidebarView: View {
             }
         }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showBiblePicker) {
+            BiblePickerView()
+                .presentationDetents([.large])
+        }
+        #if !targetEnvironment(macCatalyst) && !os(macOS)
+        .task { await viewModel.requestSpeechPermission() }
+        #endif
     }
 }
 
-// MARK: - Mic button
+// MARK: - Mic button (iOS only)
 
+#if !targetEnvironment(macCatalyst) && !os(macOS)
 private struct MicButton: View {
     @Environment(StudyViewModel.self) private var viewModel
 
     var body: some View {
-        // Speech input is only available on physical iPad — not Mac (Designed for iPad)
-        if viewModel.isSpeechSupported {
-            button
-        }
-    }
-
-    private var button: some View {
         Button {
             viewModel.toggleRecording()
         } label: {
@@ -138,5 +153,65 @@ private struct MicButton: View {
         .help(viewModel.speechPermission == .denied
               ? "Speech recognition denied — enable in Settings"
               : "Tap to dictate a reference")
+    }
+}
+#endif
+
+// MARK: - Example group
+
+private struct ExampleGroup: View {
+    @Environment(StudyViewModel.self) private var viewModel
+    let label: String
+    let examples: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+
+            ForEach(examples, id: \.self) { example in
+                Button(example) {
+                    viewModel.referenceInput = example
+                    Task { await viewModel.submit() }
+                }
+                .font(.caption)
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+            }
+        }
+    }
+}
+
+// MARK: - History list
+
+private struct HistoryList: View {
+    @Environment(StudyViewModel.self) private var viewModel
+    @Environment(HistoryStore.self) private var history
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Recent")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+
+            ForEach(history.entries) { entry in
+                Button {
+                    Task { await viewModel.submitHistory(entry) }
+                } label: {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(entry.displayTitle)
+                            .font(.caption)
+                            .foregroundStyle(Color.accentColor)
+                        if entry.query.caseInsensitiveCompare(entry.displayTitle) != .orderedSame {
+                            Text(entry.query)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }

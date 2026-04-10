@@ -39,4 +39,36 @@ enum KeychainService {
                        kSecAttrService: service,
                        kSecAttrAccount: esvAccount] as CFDictionary)
     }
+
+    // MARK: - Generic provider key storage
+
+    static func saveKey(_ key: String, forProvider providerID: String) {
+        let data = Data(key.utf8)
+        SecItemDelete([kSecClass: kSecClassGenericPassword,
+                       kSecAttrService: service,
+                       kSecAttrAccount: providerID] as CFDictionary)
+        SecItemAdd([kSecClass: kSecClassGenericPassword,
+                    kSecAttrService: service,
+                    kSecAttrAccount: providerID,
+                    kSecValueData: data,
+                    kSecAttrAccessible: kSecAttrAccessibleWhenUnlocked] as CFDictionary, nil)
+    }
+
+    static func loadKey(forProvider providerID: String) -> String? {
+        var result: AnyObject?
+        let status = SecItemCopyMatching(
+            [kSecClass: kSecClassGenericPassword,
+             kSecAttrService: service,
+             kSecAttrAccount: providerID,
+             kSecReturnData: true,
+             kSecMatchLimit: kSecMatchLimitOne] as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func deleteKey(forProvider providerID: String) {
+        SecItemDelete([kSecClass: kSecClassGenericPassword,
+                       kSecAttrService: service,
+                       kSecAttrAccount: providerID] as CFDictionary)
+    }
 }

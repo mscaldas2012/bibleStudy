@@ -43,5 +43,6 @@ struct ContentView: View {
             }
         }
         .environment(viewModel)
+        .environment(HistoryStore.shared)
     }
 }

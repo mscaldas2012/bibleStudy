@@ -8,12 +8,31 @@ struct SettingsView: View {
     @State private var apiKey: String = ""
     @State private var isKeyStored = false
     @State private var saveStatus: SaveStatus = .idle
+    @State private var showProviderSettings = false
 
     enum SaveStatus { case idle, saved }
 
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Button {
+                        showProviderSettings = true
+                    } label: {
+                        HStack {
+                            Label("AI Provider", systemImage: "brain")
+                            Spacer()
+                            Text(LLMProviderStore.shared.activeDisplayName)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                }
+
                 Section {
                     SecureField("Paste API key here", text: $apiKey)
                         .autocorrectionDisabled()
@@ -61,6 +80,9 @@ struct SettingsView: View {
                     apiKey = stored
                     isKeyStored = true
                 }
+            }
+            .sheet(isPresented: $showProviderSettings) {
+                LLMProviderSettingsView()
             }
         }
     }

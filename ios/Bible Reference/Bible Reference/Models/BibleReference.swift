@@ -178,6 +178,18 @@ private func resolveBook(_ raw: String) throws -> String {
     return canonical
 }
 
+// MARK: - Internal helpers (used by BibleSpeechNormalizer)
+
+/// Resolve a lowercased alias to its canonical book name, or nil if unknown.
+func canonicalBookName(_ raw: String) -> String? {
+    _canonical[raw.trimmingCharacters(in: .whitespaces).lowercased()]
+}
+
+/// Return the per-chapter verse counts for a canonical book name.
+func verseCountsForBook(_ book: String) -> [Int]? {
+    _verseCountData[book]
+}
+
 // MARK: - AnyCodable helper (for book_aliases.json mixed types)
 
 private struct AnyCodable: Decodable {

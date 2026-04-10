@@ -1,5 +1,8 @@
 /// SpeechService.swift
 /// Wraps SFSpeechRecognizer for live transcription of Bible references.
+/// On iOS 17+, attaches a custom language model tuned for Bible reference patterns
+/// so the engine emits word-numbers ("three sixteen") instead of collapsed digits ("316").
+/// All transcripts are passed through BibleSpeechNormalizer before being published.
 
 import Foundation
 import Speech
@@ -17,6 +20,8 @@ final class SpeechService {
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
+    /// Cached model directory URL populated by prepareLanguageModel().
+    private var languageModelURL: URL?
 
     // MARK: - Permissions
 
@@ -25,6 +30,17 @@ final class SpeechService {
             SFSpeechRecognizer.requestAuthorization { status in
                 continuation.resume(returning: status)
             }
+        }
+    }
+
+    // MARK: - Language model (iOS 17+)
+
+    /// Call once at startup (after permission granted) to prepare and cache the custom language model.
+    /// Stores the compiled model directory URL so startRecording() can attach it synchronously.
+    func prepareLanguageModel() async {
+        if #available(iOS 17, *) {
+            await BibleLanguageModelService.shared.prepare()
+            languageModelURL = await BibleLanguageModelService.shared.compiledModelURL
         }
     }
 
@@ -72,6 +88,12 @@ final class SpeechService {
             request.requiresOnDeviceRecognition = true
         }
 
+        // Attach custom language model if available (iOS 17+).
+        // languageModelURL points to the compiled model directory produced by BibleLanguageModelService.
+        if #available(iOS 17, *), let modelURL = languageModelURL {
+            request.customizedLanguageModel = SFSpeechLanguageModel.Configuration(languageModel: modelURL)
+        }
+
         let inputNode = audioEngine.inputNode
         // Pass nil format so AVAudio picks the native format — required on macOS
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: nil) { [weak self] buffer, _ in
@@ -81,7 +103,9 @@ final class SpeechService {
         recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, err in
             guard let self else { return }
             if let result {
-                self.transcript = result.bestTranscription.formattedString
+                // Normalize the raw transcript before publishing so callers always get
+                // a parseable reference string (e.g. "John 3:16" not "john three sixteen").
+                self.transcript = BibleSpeechNormalizer.normalize(result.bestTranscription.formattedString)
             }
             if err != nil || result?.isFinal == true {
                 self.stopRecording()

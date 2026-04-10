@@ -1,5 +1,5 @@
 /// StudyViewModel.swift
-/// Orchestrates parsing, ESV fetch, and Foundation Model generation.
+/// Orchestrates parsing, ESV fetch, and AI generation.
 /// Cards appear progressively: context → historical background → cross-references.
 
 import Foundation
@@ -12,6 +12,30 @@ final class StudyViewModel {
     // MARK: - Input
     var referenceInput: String = ""
 
+    // MARK: - Speech
+    private let speechService = SpeechService()
+
+    var isSpeechRecording: Bool { speechService.isRecording }
+    var liveTranscript: String { speechService.transcript }
+    var speechPermission: SFSpeechRecognizerAuthorizationStatus { speechService.permissionStatus }
+    var isSpeechSupported: Bool { speechService.isSupported }
+
+    func requestSpeechPermission() async {
+        await speechService.requestPermission()
+        await speechService.prepareLanguageModel()
+    }
+
+    func toggleRecording() {
+        if speechService.isRecording {
+            speechService.stopRecording()
+            if !speechService.transcript.isEmpty {
+                referenceInput = speechService.transcript
+            }
+        } else {
+            try? speechService.startRecording()
+        }
+    }
+
     // MARK: - Output
     var currentNote: StudyNote?
     var topicCandidates: [String] = []   // non-empty = show passage picker
@@ -22,19 +46,24 @@ final class StudyViewModel {
     var error: AppError?
 
     // MARK: - Services
-    private let speechService = SpeechService()
-    private let modelService = FoundationModelService()
+    /// App-layer adapter that translates Bible study tasks to the active LLMProvider.
+    /// Swap providers in Settings — this always reads the current one.
+    private let bibleAI = BibleLLMAdapter()
     private let tskService = TSKService()
+
+    // MARK: - History helpers (cleared at start of each submit)
+    private var pendingHistoryQuery: String = ""
+    private var pendingHistoryTitle: String = ""
 
     enum LoadingPhase {
         case idle, parsingReference, resolvingTopic, fetchingText, generatingInsights
 
         var label: String {
             switch self {
-            case .idle: return ""
-            case .parsingReference: return "Parsing reference…"
-            case .resolvingTopic: return "Finding passage…"
-            case .fetchingText: return "Fetching ESV text…"
+            case .idle:               return ""
+            case .parsingReference:   return "Parsing reference…"
+            case .resolvingTopic:     return "Finding passage…"
+            case .fetchingText:       return "Fetching ESV text…"
             case .generatingInsights: return "Generating insights…"
             }
         }
@@ -46,20 +75,24 @@ final class StudyViewModel {
         let trimmed = referenceInput.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
 
+        let historyQuery = pendingHistoryQuery.isEmpty ? trimmed : pendingHistoryQuery
+        pendingHistoryQuery = ""
+        pendingHistoryTitle = ""
+
         error = nil
         isLoading = true
         currentNote = nil
         topicCandidates = []
 
         do {
-            // 1. Parse reference — if it fails, treat input as a topic and resolve via FM
+            // 1. Parse reference — if it fails, resolve as a topic name via AI
             loadingPhase = .parsingReference
             let ref: BibleReference
             do {
                 ref = try parseBibleReference(trimmed)
             } catch {
                 loadingPhase = .resolvingTopic
-                let resolution = try await modelService.resolvePassage(topic: trimmed)
+                let resolution = try await bibleAI.resolvePassage(topic: trimmed)
                 let valid = resolution.references.filter { (try? parseBibleReference($0)) != nil }
                 if valid.isEmpty {
                     throw AppError.parseFailure("Could not find a passage for \"\(trimmed)\". Try a direct reference like \"Luke 15:11-32\".")
@@ -68,6 +101,7 @@ final class StudyViewModel {
                 } else {
                     isLoading = false
                     loadingPhase = .idle
+                    pendingHistoryQuery = historyQuery
                     topicCandidates = valid
                     return
                 }
@@ -89,6 +123,9 @@ final class StudyViewModel {
                 }
             }
 
+            // Record history
+            HistoryStore.shared.add(query: historyQuery, displayTitle: ref.displayTitle)
+
             // Show all cards immediately with spinners — content fills in as each call completes
             loadingPhase = .generatingInsights
             currentNote = StudyNote(
@@ -103,28 +140,41 @@ final class StudyViewModel {
             isLoading = false
             loadingPhase = .idle
 
-            // Yield so SwiftUI renders the empty cards (with spinners) before model calls begin
+            // Yield so SwiftUI renders the empty cards before AI calls begin
             await Task.yield()
 
             // 4a. Context + applications
-            if let contextResult = try? await modelService.analyzeContext(reference: ref, verseText: verseText) {
-                currentNote?.context = contextResult.context
-                currentNote?.applications = contextResult.applications
+            do {
+                let result = try await bibleAI.analyzeContext(reference: ref, verseText: verseText)
+                currentNote?.context = result.context
+                currentNote?.applications = result.applications
+            } catch {
+                currentNote?.contextError = error.localizedDescription
             }
 
             // 4b. Historical background
-            if let historyResult = try? await modelService.analyzeHistory(reference: ref, verseText: verseText) {
-                currentNote?.historicalBackground = historyResult.historicalBackground
+            do {
+                let result = try await bibleAI.analyzeHistory(reference: ref, verseText: verseText)
+                currentNote?.historicalBackground = result.historicalBackground
+            } catch {
+                currentNote?.historyError = error.localizedDescription
             }
 
             // 4c. Cross-reference explanations
-            if !crossRefs.isEmpty,
-               let crossRefResult = try? await modelService.analyzeCrossRefs(reference: ref, crossRefs: crossRefs) {
-                var refs = crossRefs
-                for i in refs.indices where i < crossRefResult.crossRefExplanations.count {
-                    refs[i].explanation = crossRefResult.crossRefExplanations[i]
+            // Always set refs from TSK so the card appears; AI explanations layer in on top
+            if !crossRefs.isEmpty {
+                currentNote?.crossReferences = crossRefs
+                await Task.yield()
+                do {
+                    let result = try await bibleAI.analyzeCrossRefs(reference: ref, crossRefs: crossRefs)
+                    var refs = crossRefs
+                    for i in refs.indices where i < result.crossRefExplanations.count {
+                        refs[i].explanation = result.crossRefExplanations[i]
+                    }
+                    currentNote?.crossReferences = refs
+                } catch {
+                    currentNote?.crossRefError = error.localizedDescription
                 }
-                currentNote?.crossReferences = refs
             }
             currentNote?.crossRefsLoaded = true
 
@@ -145,28 +195,9 @@ final class StudyViewModel {
         await submit()
     }
 
-    // MARK: - Speech passthrough
-
-    var isSpeechRecording: Bool { speechService.isRecording }
-    var isSpeechSupported: Bool { speechService.isSupported }
-    var speechPermission: SFSpeechRecognizerAuthorizationStatus { speechService.permissionStatus }
-    var speechError: String? { speechService.error }
-
-    func requestSpeechPermission() async {
-        await speechService.requestPermission()
+    func submitHistory(_ entry: HistoryEntry) async {
+        pendingHistoryQuery = entry.query
+        referenceInput = entry.displayTitle
+        await submit()
     }
-
-    func toggleRecording() {
-        if speechService.isRecording {
-            speechService.stopRecording()
-            if !speechService.transcript.isEmpty {
-                referenceInput = speechService.transcript
-            }
-        } else {
-            try? speechService.startRecording()
-        }
-    }
-
-    /// Live transcript while recording — bind to show real-time feedback.
-    var liveTranscript: String { speechService.transcript }
 }
