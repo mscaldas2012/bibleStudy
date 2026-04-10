@@ -1,7 +1,8 @@
 /// SidebarView.swift
-/// Left panel: reference input with keyboard and Bible picker support.
+/// Left panel: reference input with keyboard, Bible picker, and microphone support.
 
 import SwiftUI
+import Speech
 
 struct SidebarView: View {
     @Environment(StudyViewModel.self) private var viewModel
@@ -55,6 +56,20 @@ struct SidebarView: View {
                         }
                         .buttonStyle(.plain)
                         .help("Browse books, chapters, and verses")
+
+                        // Microphone button (iOS only)
+                        #if !targetEnvironment(macCatalyst) && !os(macOS)
+                        MicButton()
+                        #endif
+                    }
+
+                    // Live transcript preview while recording
+                    if viewModel.isSpeechRecording, !viewModel.liveTranscript.isEmpty {
+                        Text(viewModel.liveTranscript)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .italic()
+                            .transition(.opacity)
                     }
                 }
 
@@ -110,8 +125,37 @@ struct SidebarView: View {
             BiblePickerView()
                 .presentationDetents([.large])
         }
+        #if !targetEnvironment(macCatalyst) && !os(macOS)
+        .task { await viewModel.requestSpeechPermission() }
+        #endif
     }
 }
+
+// MARK: - Mic button (iOS only)
+
+#if !targetEnvironment(macCatalyst) && !os(macOS)
+private struct MicButton: View {
+    @Environment(StudyViewModel.self) private var viewModel
+
+    var body: some View {
+        Button {
+            viewModel.toggleRecording()
+        } label: {
+            Image(systemName: viewModel.isSpeechRecording ? "mic.fill" : "mic")
+                .font(.title3)
+                .foregroundStyle(viewModel.isSpeechRecording ? .red : .secondary)
+                .symbolEffect(.pulse, isActive: viewModel.isSpeechRecording)
+                .frame(width: 36, height: 36)
+                .background(.quaternary, in: .circle)
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.speechPermission == .denied)
+        .help(viewModel.speechPermission == .denied
+              ? "Speech recognition denied — enable in Settings"
+              : "Tap to dictate a reference")
+    }
+}
+#endif
 
 // MARK: - Example group
 

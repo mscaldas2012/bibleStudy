@@ -54,8 +54,6 @@ private struct BookPickerStep: View {
     private let otSections: [BibleSection] = [.torah, .otHistory, .wisdom, .majorProphets, .minorProphets]
     private let ntSections: [BibleSection] = [.gospels, .ntHistory, .pauline, .generalLetters, .prophecy]
 
-    private var isIPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
-
     var body: some View {
         let content = VStack(alignment: .leading, spacing: 12) {
             TestamentColumn(label: "Old Testament", sections: otSections, path: $path)
@@ -65,15 +63,7 @@ private struct BookPickerStep: View {
         .padding(.top, 8)
         .padding(.bottom, 4)
 
-        Group {
-            if isIPad {
-                // iPad: no ScrollView — sheet auto-sizes to content via .presentationSizing(.fitted)
-                content
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-            } else {
-                ScrollView { content }
-            }
-        }
+        ScrollView { content }
         .navigationTitle("Select Book")
         .navigationBarTitleDisplayMode(.inline)
     }
