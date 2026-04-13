@@ -26,6 +26,12 @@ struct SelectableText: UIViewRepresentable {
         return tv
     }
 
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView tv: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? UIScreen.main.bounds.width
+        let size = tv.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: size.height)
+    }
+
     func updateUIView(_ tv: UITextView, context: Context) {
         let para = NSMutableParagraphStyle()
         para.lineSpacing = lineSpacing

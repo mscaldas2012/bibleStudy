@@ -54,6 +54,7 @@ final class StudyViewModel {
     // MARK: - History helpers (cleared at start of each submit)
     private var pendingHistoryQuery: String = ""
     private var pendingHistoryTitle: String = ""
+    private var lastLookedUpQuery: String = ""
 
     enum LoadingPhase {
         case idle, parsingReference, resolvingTopic, fetchingText, generatingInsights
@@ -74,6 +75,7 @@ final class StudyViewModel {
     func submit() async {
         let trimmed = referenceInput.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
+        guard trimmed.lowercased() != lastLookedUpQuery else { return }
 
         let historyQuery = pendingHistoryQuery.isEmpty ? trimmed : pendingHistoryQuery
         pendingHistoryQuery = ""
@@ -83,6 +85,7 @@ final class StudyViewModel {
         isLoading = true
         currentNote = nil
         topicCandidates = []
+        lastLookedUpQuery = trimmed.lowercased()
 
         do {
             // 1. Parse reference — if it fails, resolve as a topic name via AI
@@ -182,10 +185,12 @@ final class StudyViewModel {
         } catch let e as AppError {
             isLoading = false
             loadingPhase = .idle
+            lastLookedUpQuery = ""
             error = e
         } catch {
             isLoading = false
             loadingPhase = .idle
+            lastLookedUpQuery = ""
             self.error = .modelGenerationFailed(error.localizedDescription)
         }
     }
