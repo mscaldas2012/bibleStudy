@@ -4,6 +4,9 @@
 
 import SwiftUI
 
+private let parchment = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
+private let warmBrown = Color(red: 0.45, green: 0.28, blue: 0.08)
+
 struct WelcomeView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("has_seen_welcome_v1") private var hasSeenWelcome = false
@@ -40,7 +43,6 @@ struct WelcomeView: View {
                     VStack(spacing: 14) {
                         WelcomeCardRow(
                             icon: "text.book.closed",
-                            iconColor: .secondary,
                             title: "ESV — Verse Text",
                             description: "The actual Bible text for shorter passages, straight from the English Standard Version. This requires a free API key — tap the ⚙️ gear icon in the top right, then follow the link to get yours in about a minute.",
                             isAI: false
@@ -48,15 +50,13 @@ struct WelcomeView: View {
 
                         WelcomeCardRow(
                             icon: "scroll",
-                            iconColor: .blue,
                             title: "Context",
                             description: "What's happening around this passage — who's speaking, what led up to it, and why it matters within the bigger story of Scripture.",
                             isAI: true
                         )
 
                         WelcomeCardRow(
-                            icon: "lightbulb",
-                            iconColor: .orange,
+                            icon: "sparkles",
                             title: "Applications",
                             description: "Practical ways to bring this passage into your daily life — things to reflect on, pray about, or act on.",
                             isAI: true
@@ -64,7 +64,6 @@ struct WelcomeView: View {
 
                         WelcomeCardRow(
                             icon: "building.columns",
-                            iconColor: Color(red: 0.6, green: 0.35, blue: 0.1),
                             title: "Historical Background",
                             description: "The world behind the text — culture, geography, and customs that shaped what was written and how it was understood.",
                             isAI: true
@@ -72,7 +71,6 @@ struct WelcomeView: View {
 
                         WelcomeCardRow(
                             icon: "link",
-                            iconColor: .green,
                             title: "Cross-References",
                             description: "Related passages from across the Bible that echo the same theme or teaching. Tap any entry to study it on its own.",
                             isAI: true
@@ -85,7 +83,7 @@ struct WelcomeView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 8) {
                             Image(systemName: "sparkles")
-                                .foregroundStyle(.purple)
+                                .foregroundStyle(warmBrown)
                             Text("A Note on AI")
                                 .font(.title3.bold())
                         }
@@ -142,6 +140,8 @@ struct WelcomeView: View {
                 }
                 .padding()
             }
+            .scrollContentBackground(.hidden)
+            .background(parchment.ignoresSafeArea())
             .navigationTitle("Daily Kairos")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -150,6 +150,7 @@ struct WelcomeView: View {
                 }
             }
         }
+        .tint(warmBrown)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
@@ -159,7 +160,6 @@ struct WelcomeView: View {
 
 private struct WelcomeCardRow: View {
     let icon: String
-    let iconColor: Color
     let title: String
     let description: String
     let isAI: Bool
@@ -168,11 +168,11 @@ private struct WelcomeCardRow: View {
         HStack(alignment: .top, spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(iconColor.opacity(0.12))
+                    .fill(warmBrown.opacity(0.10))
                     .frame(width: 44, height: 44)
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(iconColor)
+                    .foregroundStyle(warmBrown)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -182,20 +182,23 @@ private struct WelcomeCardRow: View {
                     if isAI {
                         Label("AI", systemImage: "sparkles")
                             .font(.caption2.bold())
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(warmBrown)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.purple.opacity(0.1), in: Capsule())
+                            .background(warmBrown.opacity(0.10), in: Capsule())
                     }
+                    Spacer()
                 }
                 Text(description)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
-        .background(.secondary.opacity(0.06), in: .rect(cornerRadius: 14))
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.06), radius: 5, x: 0, y: 2)
     }
 }
