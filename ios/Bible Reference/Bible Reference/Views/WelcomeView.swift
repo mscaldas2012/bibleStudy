@@ -11,6 +11,11 @@ struct WelcomeView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("has_seen_welcome_v1") private var hasSeenWelcome = false
 
+    private var esvKeyIsSet: Bool {
+        if let key = KeychainService.loadESVKey(), !key.isEmpty { return true }
+        return false
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -41,12 +46,16 @@ struct WelcomeView: View {
                     }
 
                     VStack(spacing: 14) {
-                        WelcomeCardRow(
-                            icon: "text.book.closed",
-                            title: "ESV — Verse Text",
-                            description: "The actual Bible text for shorter passages, straight from the English Standard Version. This requires a free API key — tap the ⚙️ gear icon in the top right, then follow the link to get yours in about a minute.",
-                            isAI: false
-                        )
+                        if esvKeyIsSet {
+                            WelcomeCardRow(
+                                icon: "text.book.closed",
+                                title: "ESV — Verse Text",
+                                description: "The actual Bible text for shorter passages, straight from the English Standard Version.",
+                                isAI: false
+                            )
+                        } else {
+                            ESVSetupCard()
+                        }
 
                         WelcomeCardRow(
                             icon: "scroll",
@@ -153,6 +162,82 @@ struct WelcomeView: View {
         .tint(warmBrown)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - ESV setup card
+
+private let esvSignupURL = URL(string: "https://api.esv.org/login/?next=/account/create-application/")!
+
+private struct ESVSetupCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            // Header row
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(warmBrown.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "text.book.closed")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(warmBrown)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("ESV — Verse Text")
+                        .font(.subheadline.bold())
+                    Text("One-time setup required")
+                        .font(.caption)
+                        .foregroundStyle(warmBrown.opacity(0.8))
+                }
+                Spacer()
+            }
+
+            Divider()
+
+            // Instructions
+            VStack(alignment: .leading, spacing: 8) {
+                Text("To display actual Bible text you need a free ESV API key (takes about a minute to create):")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(3)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Create a free account at api.esv.org", systemImage: "1.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    Label("Copy your API key", systemImage: "2.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    Label("Paste it in Settings (⚙️ top right)", systemImage: "3.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                }
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(warmBrown)
+
+                Link(destination: esvSignupURL) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.right.square")
+                        Text("Get your free ESV API key")
+                            .fontWeight(.semibold)
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                    .background(warmBrown, in: RoundedRectangle(cornerRadius: 10))
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding(14)
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(warmBrown.opacity(0.35), lineWidth: 1.5))
+        .shadow(color: warmBrown.opacity(0.12), radius: 6, x: 0, y: 2)
     }
 }
 

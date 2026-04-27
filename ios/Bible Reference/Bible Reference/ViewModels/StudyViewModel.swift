@@ -113,17 +113,20 @@ final class StudyViewModel {
             // 2. Fetch cross-references from TSK (offline, instant)
             let crossRefs = await tskService.fetchRefs(for: ref)
 
-            // 3. Fetch ESV text if applicable
+            // 3. Fetch ESV text (always attempted; multi-chapter refs query first chapter only)
             var verseText: String? = nil
             var esvKeyMissing = false
-            if ref.shouldShowText {
-                if let key = KeychainService.loadESVKey(), !key.isEmpty {
-                    loadingPhase = .fetchingText
-                    let svc = ESVService(apiKey: key)
-                    verseText = try? await svc.fetchPassage(for: ref)
-                } else {
-                    esvKeyMissing = true
+            var esvError: String? = nil
+            if let key = KeychainService.loadESVKey(), !key.isEmpty {
+                loadingPhase = .fetchingText
+                let svc = ESVService(apiKey: key)
+                do {
+                    verseText = try await svc.fetchPassage(for: ref)
+                } catch {
+                    esvError = error.localizedDescription
                 }
+            } else {
+                esvKeyMissing = true
             }
 
             // Record history and streak
@@ -139,7 +142,8 @@ final class StudyViewModel {
                 applications: [],
                 historicalBackground: "",
                 crossReferences: [],
-                esvKeyMissing: esvKeyMissing
+                esvKeyMissing: esvKeyMissing,
+                esvError: esvError
             )
             isLoading = false
             loadingPhase = .idle

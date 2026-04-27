@@ -12,11 +12,13 @@ struct StudyNoteView: View {
             VStack(alignment: .leading, spacing: 20) {
 
 
-                // Verse text (short passages only)
+                // Verse text — always shown; multi-chapter refs display the first chapter
                 if let text = note.verseText {
                     VerseTextCard(text: text, reference: note.reference)
                 } else if note.esvKeyMissing {
                     ESVKeyPromptCard()
+                } else if let err = note.esvError {
+                    ESVErrorCard(message: err)
                 }
 
                 // Context
@@ -108,10 +110,16 @@ private struct VerseTextCard: View {
                 .frame(width: 4)
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("ESV · \(reference.displayTitle.uppercased())")
-                    .font(.caption.bold())
-                    .foregroundStyle(warmBrown.opacity(0.75))
-                    .tracking(0.8)
+                HStack {
+                    Text(reference.displayTitle.uppercased())
+                        .font(.caption.bold())
+                        .foregroundStyle(warmBrown.opacity(0.75))
+                        .tracking(0.8)
+                    Spacer()
+                    Link("ESV®", destination: URL(string: "https://www.esv.org")!)
+                        .font(.caption.bold())
+                        .foregroundStyle(warmBrown.opacity(0.75))
+                }
 
                 ScrollView {
                     SelectableText(text: text, font: Self.verseFont, lineSpacing: 7,
@@ -120,13 +128,52 @@ private struct VerseTextCard: View {
                         .padding(.vertical, 2)
                 }
                 .frame(maxHeight: 400)
+
+                // Required copyright attribution per ESV API terms
+                Text("© 2001 Crossway. All rights reserved.")
+                    .font(.caption2)
+                    .foregroundStyle(warmBrown.opacity(0.45))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
         }
-        .background(parchment)
+        .background(.white)
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(warmBrown.opacity(0.15), lineWidth: 1))
+        .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
+    }
+}
+
+/// MARK: - ESV error card
+
+private struct ESVErrorCard: View {
+    let message: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            warmBrown.opacity(0.35)
+                .frame(width: 4)
+
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.subheadline)
+                    .foregroundStyle(warmBrown.opacity(0.7))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("ESV · Could not load passage text")
+                        .font(.caption.bold())
+                        .foregroundStyle(warmBrown.opacity(0.75))
+                        .tracking(0.8)
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
     }
 }
 

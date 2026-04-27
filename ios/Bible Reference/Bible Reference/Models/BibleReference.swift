@@ -50,7 +50,11 @@ struct BibleReference: Equatable {
     /// Display string, e.g. "John 3:16" or "Genesis 1-3"
     var displayTitle: String {
         if chapterStart == chapterEnd {
-            if verseStart == nil { return "\(book) \(chapterStart)" }
+            if verseStart == nil {
+                // Single-chapter books: "Jude" is cleaner than "Jude 1"
+                if _singleChapterBooks.contains(book) { return book }
+                return "\(book) \(chapterStart)"
+            }
             if verseStart == verseEnd { return "\(book) \(chapterStart):\(verseStart!)" }
             return "\(book) \(chapterStart):\(verseStart!)-\(verseEnd!)"
         }
@@ -58,8 +62,17 @@ struct BibleReference: Equatable {
         return "\(book) \(chapterStart):\(verseStart!)-\(chapterEnd):\(verseEnd!)"
     }
 
-    /// Same format accepted by the ESV API `q` parameter.
-    var esvQuery: String { displayTitle }
+    /// Query string for the ESV API.
+    /// - Single-chapter books with no verse range: query the book name only ("Jude" not "Jude 1")
+    ///   so the ESV API unambiguously returns the whole book rather than verse 1.
+    /// - Multi-chapter references: cap to the first chapter so the card always has something to show.
+    var esvQuery: String {
+        if _singleChapterBooks.contains(book) && verseStart == nil {
+            return book
+        }
+        guard chapterStart != chapterEnd else { return displayTitle }
+        return "\(book) \(chapterStart)"
+    }
 
     /// Total number of verses this reference spans.
     var verseCount: Int {
@@ -92,10 +105,6 @@ struct BibleReference: Equatable {
         return count
     }
 
-    /// True when ESV text should be fetched and displayed.
-    /// Shows text for anything within a single chapter (any verse range or full chapter).
-    /// Hides text for multi-chapter or whole-book requests.
-    var shouldShowText: Bool { chapterStart == chapterEnd }
 }
 
 // MARK: - Parser
@@ -156,6 +165,11 @@ func parseBibleReference(_ input: String) throws -> BibleReference {
         let book = try resolveBook(String(m.book))
         let num = Int(m.ch)!
         if _singleChapterBooks.contains(book) {
+            // "Jude 1" means chapter 1 (whole book); "Jude 5" is verse-shorthand for Jude 1:5
+            if num == 1 {
+                return BibleReference(book: book, chapterStart: 1, chapterEnd: 1,
+                                      verseStart: nil, verseEnd: nil)
+            }
             return BibleReference(book: book, chapterStart: 1, chapterEnd: 1,
                                   verseStart: num, verseEnd: num)
         }

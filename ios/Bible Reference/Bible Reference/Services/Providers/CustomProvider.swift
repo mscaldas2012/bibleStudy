@@ -29,7 +29,7 @@ struct CustomProvider: LLMProvider {
 
     func verify() async throws -> String {
         // Quick 1-token completion to verify connectivity
-        _ = try await chat(systemPrompt: "Respond with exactly the word OK.", userPrompt: "hi")
+        _ = try await chat(systemPrompt: Prompts.verifySystem, userPrompt: "hi")
         return "Connected to \(config.displayName). Model: \(config.model)"
     }
 

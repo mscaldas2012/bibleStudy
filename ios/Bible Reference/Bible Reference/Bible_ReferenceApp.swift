@@ -11,6 +11,10 @@ import SwiftUI
 struct Bible_ReferenceApp: App {
     @State private var showSplash = true
 
+    init() {
+        Prompts.preload()
+    }
+
     var body: some Scene {
         WindowGroup {
             ZStack {

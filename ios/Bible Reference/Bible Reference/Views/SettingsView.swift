@@ -81,7 +81,12 @@ struct SettingsView: View {
                 } header: {
                     Text("ESV API Key")
                 } footer: {
-                    Text("Free key available at api.esv.org — required to display verse text.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Required to display verse text. Free to create.")
+                        Link("Get your key at api.esv.org →",
+                             destination: URL(string: "https://api.esv.org/login/?next=/account/create-application/")!)
+                            .foregroundStyle(warmBrown)
+                    }
                 }
 
                 if isKeyStored {
@@ -98,6 +103,21 @@ struct SettingsView: View {
                 if saveStatus == .saved {
                     Label("Key saved securely.", systemImage: "checkmark.circle")
                         .foregroundStyle(.green)
+                }
+
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), copyright © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineSpacing(3)
+                        Link("www.esv.org", destination: URL(string: "https://www.esv.org")!)
+                            .font(.caption)
+                            .foregroundStyle(warmBrown)
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("Scripture Text")
                 }
 
                 Section {

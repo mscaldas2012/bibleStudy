@@ -48,6 +48,7 @@ struct StudyNote: Identifiable {
     var crossReferences: [CrossRef]         // empty until cross-ref call completes
     var crossRefsLoaded: Bool = false       // true once cross-ref phase finishes (even if 0 refs)
     var esvKeyMissing: Bool = false
+    var esvError: String?
     let createdAt: Date = .now
 
     // Per-section AI errors — nil while loading or when successful

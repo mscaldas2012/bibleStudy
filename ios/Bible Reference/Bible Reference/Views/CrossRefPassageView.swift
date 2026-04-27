@@ -31,13 +31,16 @@ final class CrossRefLoader {
 
             var verseText: String? = nil
             var esvKeyMissing = false
-            if ref.shouldShowText {
-                if let key = KeychainService.loadESVKey(), !key.isEmpty {
-                    let svc = ESVService(apiKey: key)
-                    verseText = try? await svc.fetchPassage(for: ref)
-                } else {
-                    esvKeyMissing = true
+            var esvError: String? = nil
+            if let key = KeychainService.loadESVKey(), !key.isEmpty {
+                let svc = ESVService(apiKey: key)
+                do {
+                    verseText = try await svc.fetchPassage(for: ref)
+                } catch {
+                    esvError = error.localizedDescription
                 }
+            } else {
+                esvKeyMissing = true
             }
 
             // Show skeleton with spinners in each card
@@ -48,7 +51,8 @@ final class CrossRefLoader {
                 applications: [],
                 historicalBackground: "",
                 crossReferences: [],
-                esvKeyMissing: esvKeyMissing
+                esvKeyMissing: esvKeyMissing,
+                esvError: esvError
             )
             isLoading = false
             await Task.yield()
