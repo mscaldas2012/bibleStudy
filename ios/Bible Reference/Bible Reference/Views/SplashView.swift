@@ -7,9 +7,9 @@ import SwiftUI
 struct SplashView: View {
 
     // Colors sampled from the logo
-    private let bgColor   = Color(red: 0.051, green: 0.282, blue: 0.227) // forest green #0D4839
+    private let bgColor   = Color(red: 0.091, green: 0.213, blue: 0.229) // forest green #0D4839
     private let goldColor = Color(red: 0.784, green: 0.592, blue: 0.224) // gold       #C89738
-    private let sandColor = Color(red: 0.627, green: 0.471, blue: 0.282) // sand       #A07848
+    private let sandColor = Color(red: 0.950, green: 0.917, blue: 0.836) // sand       #A07848
 
     var body: some View {
         bgColor
