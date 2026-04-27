@@ -3,6 +3,9 @@
 
 import SwiftUI
 
+private let parchment  = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
+private let warmBrown  = Color(red: 0.45, green: 0.28, blue: 0.08)
+
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var apiKey: String = ""
@@ -111,6 +114,9 @@ struct SettingsView: View {
                     Text("A celebration appears on your first daily lookup once your streak reaches 3 or more days.")
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(parchment.ignoresSafeArea())
+            .tint(warmBrown)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

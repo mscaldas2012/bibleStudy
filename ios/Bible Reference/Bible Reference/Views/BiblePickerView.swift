@@ -4,6 +4,9 @@
 
 import SwiftUI
 
+private let parchment = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
+private let warmBrown = Color(red: 0.45, green: 0.28, blue: 0.08)
+
 // MARK: - Root sheet
 
 struct BiblePickerView: View {
@@ -27,6 +30,7 @@ struct BiblePickerView: View {
                     }
                 }
         }
+        .tint(warmBrown)
     }
 }
 
@@ -64,6 +68,7 @@ private struct BookPickerStep: View {
         .padding(.bottom, 4)
 
         ScrollView { content }
+        .background(parchment.ignoresSafeArea())
         .navigationTitle("Select Book")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -149,6 +154,7 @@ private struct ChapterPickerStep: View {
             }
             .padding()
         }
+        .background(parchment.ignoresSafeArea())
         .navigationTitle("\(book.name)")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -203,7 +209,7 @@ private struct VersePickerStep: View {
             }
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
-            .background(.bar)
+            .background(warmBrown.opacity(0.06))
 
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 52, maximum: 70), spacing: 10)], spacing: 10) {
@@ -234,6 +240,7 @@ private struct VersePickerStep: View {
             .disabled(startVerse == nil)
             .padding()
         }
+        .background(parchment.ignoresSafeArea())
         .navigationTitle("Ch. \(selection.chapter)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

@@ -11,9 +11,10 @@ struct StudyNoteView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
 
+
                 // Verse text (short passages only)
                 if let text = note.verseText {
-                    VerseTextCard(text: text)
+                    VerseTextCard(text: text, reference: note.reference)
                 } else if note.esvKeyMissing {
                     ESVKeyPromptCard()
                 }
@@ -22,7 +23,7 @@ struct StudyNoteView: View {
                 StudyCard(
                     icon: "scroll",
                     title: "Context",
-                    accentColor: .blue,
+                    accentColor: warmBrown,
                     aiGenerated: true
                 ) {
                     if let err = note.contextError {
@@ -38,10 +39,10 @@ struct StudyNoteView: View {
 
                 // Applications
                 StudyCard(
-                    icon: "lightbulb",
+                    icon: "sparkles",
                     title: "Applications",
-                    accentColor: .orange,
-                    aiGenerated: true
+                    accentColor: warmBrown,
+                    aiGenerated: false
                 ) {
                     if note.contextError != nil {
                         EmptyView() // error already shown in Context card above
@@ -52,10 +53,10 @@ struct StudyNoteView: View {
                             ForEach(Array(note.applications.enumerated()), id: \.offset) { idx, app in
                                 HStack(alignment: .top, spacing: 12) {
                                     Text("\(idx + 1)")
-                                        .font(.headline)
-                                        .foregroundStyle(.white)
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(warmBrown)
                                         .frame(width: 26, height: 26)
-                                        .background(.orange, in: .circle)
+                                        .overlay(Circle().stroke(warmBrown.opacity(0.5), lineWidth: 1.5))
                                     SelectableText(text: app, lineSpacing: 4)
                                 }
                             }
@@ -84,27 +85,48 @@ struct StudyNoteView: View {
             }
             .padding()
         }
+        .scrollContentBackground(.hidden)
+        .background(parchment.ignoresSafeArea())
     }
 }
 
 // MARK: - Verse text card
 
+private let parchment = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
+private let warmBrown = Color(red: 0.45, green: 0.28, blue: 0.08)
+
 private struct VerseTextCard: View {
     let text: String
+    let reference: BibleReference
+
+    private static let verseFont: UIFont =
+        UIFont(name: "Georgia-Italic", size: 17) ?? .preferredFont(forTextStyle: .body)
 
     var body: some View {
-        GroupBox {
-            ScrollView {
-                SelectableText(text: text, lineSpacing: 6, italic: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 4)
+        HStack(alignment: .top, spacing: 0) {
+            warmBrown
+                .frame(width: 4)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("ESV · \(reference.displayTitle.uppercased())")
+                    .font(.caption.bold())
+                    .foregroundStyle(warmBrown.opacity(0.75))
+                    .tracking(0.8)
+
+                ScrollView {
+                    SelectableText(text: text, font: Self.verseFont, lineSpacing: 7,
+                                   color: UIColor(red: 0.18, green: 0.12, blue: 0.06, alpha: 1))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 2)
+                }
+                .frame(maxHeight: 400)
             }
-            .frame(maxHeight: 400)
-        } label: {
-            Label("ESV", systemImage: "text.book.closed")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
+        .background(parchment)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(warmBrown.opacity(0.15), lineWidth: 1))
     }
 }
 
@@ -142,21 +164,28 @@ private struct StudyCard<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        GroupBox {
-            content()
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } label: {
-            HStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(accentColor)
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(accentColor)
                 if aiGenerated {
                     Image(systemName: "sparkles")
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(accentColor.opacity(0.5))
                 }
-                Label(title, systemImage: icon)
-                    .font(.headline)
-                    .foregroundStyle(accentColor)
             }
+            Divider()
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(16)
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
     }
 }
 

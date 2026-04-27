@@ -3,6 +3,8 @@
 
 import SwiftUI
 
+private let detailParchment = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
+
 struct DetailView: View {
     @Environment(StudyViewModel.self) private var viewModel
 
@@ -36,6 +38,8 @@ struct DetailView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(detailParchment.ignoresSafeArea())
         .navigationTitle(viewModel.currentNote?.reference.displayTitle ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: String.self) { refString in

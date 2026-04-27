@@ -47,6 +47,7 @@ struct ContentView: View {
                 }
             }
         }
+        .preferredColorScheme(.light)
         .environment(viewModel)
         .environment(HistoryStore.shared)
         // Celebration is blocked while the welcome sheet is visible.

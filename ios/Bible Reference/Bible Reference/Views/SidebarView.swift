@@ -18,7 +18,7 @@ struct SidebarView: View {
             VStack(alignment: .leading, spacing: 24) {
                 // App title
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Bible Study")
+                    Text("Daily Kairos")
                         .font(.largeTitle.bold())
                     Text("Enter a reference or passage name")
                         .font(.subheadline)
@@ -82,6 +82,7 @@ struct SidebarView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(Color(red: 0.45, green: 0.28, blue: 0.08))
                 .controlSize(.large)
                 .disabled(
                     viewModel.referenceInput.trimmingCharacters(in: .whitespaces).isEmpty
@@ -177,7 +178,7 @@ private struct ExampleGroup: View {
                 }
                 .font(.caption)
                 .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(historyWarmBrown)
             }
         }
     }
@@ -185,33 +186,79 @@ private struct ExampleGroup: View {
 
 // MARK: - History list
 
+private let historyWarmBrown = Color(red: 0.45, green: 0.28, blue: 0.08)
+
 private struct HistoryList: View {
     @Environment(StudyViewModel.self) private var viewModel
     @Environment(HistoryStore.self) private var history
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Recent")
                 .font(.caption.bold())
                 .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.8)
+                .padding(.bottom, 8)
 
-            ForEach(history.entries) { entry in
-                Button {
-                    Task { await viewModel.submitHistory(entry) }
-                } label: {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(entry.displayTitle)
-                            .font(.caption)
-                            .foregroundStyle(Color.accentColor)
-                        if entry.query.caseInsensitiveCompare(entry.displayTitle) != .orderedSame {
-                            Text(entry.query)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+            VStack(spacing: 0) {
+                ForEach(Array(history.entries.enumerated()), id: \.element.id) { idx, entry in
+                    if idx > 0 {
+                        Divider().padding(.leading, 52)
+                    }
+                    HistoryRow(entry: entry) {
+                        Task { await viewModel.submitHistory(entry) }
                     }
                 }
-                .buttonStyle(.plain)
             }
+            .background(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: .black.opacity(0.06), radius: 5, x: 0, y: 2)
         }
+    }
+}
+
+private struct HistoryRow: View {
+    let entry: HistoryEntry
+    let action: () -> Void
+
+    private var dateLabel: String {
+        let cal = Calendar.current
+        if cal.isDateInToday(entry.timestamp)     { return "Today" }
+        if cal.isDateInYesterday(entry.timestamp) { return "Yesterday" }
+        return entry.timestamp.formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(historyWarmBrown.opacity(0.10))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "book.closed")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(historyWarmBrown)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.displayTitle)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(dateLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
+        .buttonStyle(.plain)
     }
 }
