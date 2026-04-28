@@ -3,10 +3,10 @@
 
 import SwiftUI
 
-private let detailParchment = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
-
 struct DetailView: View {
     @Environment(StudyViewModel.self) private var viewModel
+    @Environment(\.appColors) private var colors
+    @ObservedObject private var fontSizeStore = FontSizeStore.shared
 
     var body: some View {
         Group {
@@ -39,7 +39,8 @@ struct DetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(detailParchment.ignoresSafeArea())
+        .background(colors.background.ignoresSafeArea())
+        .dynamicTypeSize(fontSizeStore.currentSize)
         .navigationTitle(viewModel.currentNote?.reference.displayTitle ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: String.self) { refString in

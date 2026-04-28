@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct Bible_ReferenceApp: App {
     @State private var showSplash = true
+    @StateObject private var fontSizeStore = FontSizeStore.shared
 
     init() {
         Prompts.preload()
@@ -19,7 +20,7 @@ struct Bible_ReferenceApp: App {
         WindowGroup {
             ZStack {
                 // ContentView loads in the background so it's ready when splash fades
-                ContentView()
+                ContentView(splashVisible: showSplash)
                     .opacity(showSplash ? 0 : 1)
 
                 if showSplash {
@@ -29,6 +30,8 @@ struct Bible_ReferenceApp: App {
                 }
             }
             .environment(StreakStore.shared)
+            .environment(ThemeStore.shared)
+            .dynamicTypeSize(fontSizeStore.currentSize)
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
                     withAnimation(.easeOut(duration: 0.6)) {

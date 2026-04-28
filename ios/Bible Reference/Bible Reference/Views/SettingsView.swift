@@ -1,13 +1,19 @@
 /// SettingsView.swift
-/// Settings sheet — currently hosts ESV API key management.
+/// Settings sheet — API key, AI provider, appearance, and streak options.
 
 import SwiftUI
 
-private let parchment  = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
-private let warmBrown  = Color(red: 0.45, green: 0.28, blue: 0.08)
-
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var colors: AppColors {
+        switch ThemeStore.shared.mode {
+        case .light:  return .light
+        case .dark:   return .dark
+        case .system: return AppColors.resolved(for: colorScheme)
+        }
+    }
     @State private var apiKey: String = ""
     @State private var isKeyStored = false
     @State private var saveStatus: SaveStatus = .idle
@@ -39,8 +45,19 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        @Bindable var themeStore = ThemeStore.shared
+
         NavigationStack {
             Form {
+                Section("Appearance") {
+                    Picker("", selection: $themeStore.mode) {
+                        ForEach(AppearanceMode.allCases, id: \.self) { mode in
+                            Text(mode.label).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
                 Section {
                     Button {
                         showProviderSettings = true
@@ -85,7 +102,7 @@ struct SettingsView: View {
                         Text("Required to display verse text. Free to create.")
                         Link("Get your key at api.esv.org →",
                              destination: URL(string: "https://api.esv.org/login/?next=/account/create-application/")!)
-                            .foregroundStyle(warmBrown)
+                            .foregroundStyle(colors.accent)
                     }
                 }
 
@@ -113,7 +130,7 @@ struct SettingsView: View {
                             .lineSpacing(3)
                         Link("www.esv.org", destination: URL(string: "https://www.esv.org")!)
                             .font(.caption)
-                            .foregroundStyle(warmBrown)
+                            .foregroundStyle(colors.accent)
                     }
                     .padding(.vertical, 4)
                 } header: {
@@ -134,9 +151,9 @@ struct SettingsView: View {
                     Text("A celebration appears on your first daily lookup once your streak reaches 3 or more days.")
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(parchment.ignoresSafeArea())
-            .tint(warmBrown)
+            .scrollContentBackground(colorScheme == .dark ? .visible : .hidden)
+            .background(colorScheme == .light ? colors.background.ignoresSafeArea() : nil)
+            .tint(colors.accent)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -166,5 +183,6 @@ struct SettingsView: View {
                 WelcomeView()
             }
         }
+        .environment(\.appColors, colors)
     }
 }

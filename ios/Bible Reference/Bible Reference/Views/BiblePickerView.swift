@@ -4,14 +4,20 @@
 
 import SwiftUI
 
-private let parchment = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
-private let warmBrown = Color(red: 0.45, green: 0.28, blue: 0.08)
-
 // MARK: - Root sheet
 
 struct BiblePickerView: View {
     @Environment(StudyViewModel.self) private var viewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var colors: AppColors {
+        switch ThemeStore.shared.mode {
+        case .light:  return .light
+        case .dark:   return .dark
+        case .system: return AppColors.resolved(for: colorScheme)
+        }
+    }
 
     /// Navigation path: [BibleBook] (chapter step), [BibleBook, Int] (verse step)
     @State private var path = NavigationPath()
@@ -30,7 +36,8 @@ struct BiblePickerView: View {
                     }
                 }
         }
-        .tint(warmBrown)
+        .environment(\.appColors, colors)
+        .tint(colors.accent)
     }
 }
 
@@ -54,6 +61,7 @@ struct ChapterSelection: Hashable {
 
 private struct BookPickerStep: View {
     @Binding var path: NavigationPath
+    @Environment(\.appColors) private var colors
 
     private let otSections: [BibleSection] = [.torah, .otHistory, .wisdom, .majorProphets, .minorProphets]
     private let ntSections: [BibleSection] = [.gospels, .ntHistory, .pauline, .generalLetters, .prophecy]
@@ -68,7 +76,7 @@ private struct BookPickerStep: View {
         .padding(.bottom, 4)
 
         ScrollView { content }
-        .background(parchment.ignoresSafeArea())
+        .background(colors.background.ignoresSafeArea())
         .navigationTitle("Select Book")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -136,8 +144,7 @@ private struct SectionRow: View {
 private struct ChapterPickerStep: View {
     let book: BibleBook
     @Binding var path: NavigationPath
-
-    private let columns = Array(repeating: GridItem(.adaptive(minimum: 52, maximum: 70), spacing: 10), count: 1)
+    @Environment(\.appColors) private var colors
 
     var body: some View {
         ScrollView {
@@ -154,7 +161,7 @@ private struct ChapterPickerStep: View {
             }
             .padding()
         }
-        .background(parchment.ignoresSafeArea())
+        .background(colors.background.ignoresSafeArea())
         .navigationTitle("\(book.name)")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -165,6 +172,7 @@ private struct ChapterPickerStep: View {
 private struct VersePickerStep: View {
     let selection: ChapterSelection
     let onConfirm: (String) -> Void
+    @Environment(\.appColors) private var colors
 
     @State private var startVerse: Int? = nil
     @State private var endVerse: Int? = nil
@@ -209,7 +217,7 @@ private struct VersePickerStep: View {
             }
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
-            .background(warmBrown.opacity(0.06))
+            .background(colors.accent.opacity(0.06))
 
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 52, maximum: 70), spacing: 10)], spacing: 10) {
@@ -240,7 +248,7 @@ private struct VersePickerStep: View {
             .disabled(startVerse == nil)
             .padding()
         }
-        .background(parchment.ignoresSafeArea())
+        .background(colors.background.ignoresSafeArea())
         .navigationTitle("Ch. \(selection.chapter)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

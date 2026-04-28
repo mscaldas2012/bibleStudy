@@ -6,11 +6,12 @@ import SwiftUI
 
 struct StudyNoteView: View {
     let note: StudyNote
+    @Environment(\.appColors) private var colors
+    @ObservedObject private var fontSizeStore = FontSizeStore.shared
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-
 
                 // Verse text — always shown; multi-chapter refs display the first chapter
                 if let text = note.verseText {
@@ -25,7 +26,7 @@ struct StudyNoteView: View {
                 StudyCard(
                     icon: "scroll",
                     title: "Context",
-                    accentColor: warmBrown,
+                    accentColor: colors.accent,
                     aiGenerated: true
                 ) {
                     if let err = note.contextError {
@@ -43,11 +44,11 @@ struct StudyNoteView: View {
                 StudyCard(
                     icon: "sparkles",
                     title: "Applications",
-                    accentColor: warmBrown,
+                    accentColor: colors.accent,
                     aiGenerated: false
                 ) {
                     if note.contextError != nil {
-                        EmptyView() // error already shown in Context card above
+                        EmptyView()
                     } else if note.applications.isEmpty {
                         SectionLoadingView()
                     } else {
@@ -55,10 +56,10 @@ struct StudyNoteView: View {
                             ForEach(Array(note.applications.enumerated()), id: \.offset) { idx, app in
                                 HStack(alignment: .top, spacing: 12) {
                                     Text("\(idx + 1)")
-                                        .font(.subheadline.bold())
-                                        .foregroundStyle(warmBrown)
+                                        .studyFont(15, weight: .bold)
+                                        .foregroundStyle(colors.accent)
                                         .frame(width: 26, height: 26)
-                                        .overlay(Circle().stroke(warmBrown.opacity(0.5), lineWidth: 1.5))
+                                        .overlay(Circle().stroke(colors.accent.opacity(0.5), lineWidth: 1.5))
                                     SelectableText(text: app, lineSpacing: 4)
                                 }
                             }
@@ -68,19 +69,19 @@ struct StudyNoteView: View {
                 }
                 .animation(.easeIn(duration: 0.4), value: note.applications.isEmpty)
 
-                // Historical background — shows spinner until content arrives
+                // Historical background
                 HistoricalBackgroundCard(text: note.historicalBackground, error: note.historyError)
 
-                // Cross-references — shows spinner until cross-ref phase finishes
+                // Cross-references
                 CrossReferencesCard(refs: note.crossReferences, loaded: note.crossRefsLoaded, error: note.crossRefError)
 
                 // Disclaimer
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.caption2)
+                        .studyFont(11)
                         .foregroundStyle(.tertiary)
                     Text("AI-generated content may contain errors. Always verify with trusted sources.")
-                        .font(.caption2)
+                        .studyFont(11)
                         .foregroundStyle(.tertiary)
                 }
                 .padding(.top, 4)
@@ -88,82 +89,82 @@ struct StudyNoteView: View {
             .padding()
         }
         .scrollContentBackground(.hidden)
-        .background(parchment.ignoresSafeArea())
+        .background(colors.background.ignoresSafeArea())
+        .dynamicTypeSize(fontSizeStore.currentSize)
     }
 }
 
 // MARK: - Verse text card
 
-private let parchment = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
-private let warmBrown = Color(red: 0.45, green: 0.28, blue: 0.08)
-
 private struct VerseTextCard: View {
     let text: String
     let reference: BibleReference
+    @Environment(\.appColors) private var colors
+    @ObservedObject private var fontSizeStore = FontSizeStore.shared
 
     private static let verseFont: UIFont =
         UIFont(name: "Georgia-Italic", size: 17) ?? .preferredFont(forTextStyle: .body)
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            warmBrown
+            colors.accent
                 .frame(width: 4)
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(reference.displayTitle.uppercased())
-                        .font(.caption.bold())
-                        .foregroundStyle(warmBrown.opacity(0.75))
+                        .studyFont(12, weight: .bold)
+                        .foregroundStyle(colors.accent.opacity(0.75))
                         .tracking(0.8)
                     Spacer()
                     Link("ESV®", destination: URL(string: "https://www.esv.org")!)
-                        .font(.caption.bold())
-                        .foregroundStyle(warmBrown.opacity(0.75))
+                        .studyFont(12, weight: .bold)
+                        .foregroundStyle(colors.accent.opacity(0.75))
                 }
 
                 ScrollView {
                     SelectableText(text: text, font: Self.verseFont, lineSpacing: 7,
-                                   color: UIColor(red: 0.18, green: 0.12, blue: 0.06, alpha: 1))
+                                   color: colors.verseTextUIColor)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 2)
                 }
                 .frame(maxHeight: 400)
 
-                // Required copyright attribution per ESV API terms
                 Text("© 2001 Crossway. All rights reserved.")
-                    .font(.caption2)
-                    .foregroundStyle(warmBrown.opacity(0.45))
+                    .studyFont(11)
+                    .foregroundStyle(colors.accent.opacity(0.45))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
         }
-        .background(.white)
+        .background(colors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
     }
 }
 
-/// MARK: - ESV error card
+// MARK: - ESV error card
 
 private struct ESVErrorCard: View {
     let message: String
+    @Environment(\.appColors) private var colors
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            warmBrown.opacity(0.35)
+            colors.accent.opacity(0.35)
                 .frame(width: 4)
 
             HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.subheadline)
-                    .foregroundStyle(warmBrown.opacity(0.7))
+                    .studyFont(15)
+                    .foregroundStyle(colors.accent.opacity(0.7))
                 VStack(alignment: .leading, spacing: 3) {
                     Text("ESV · Could not load passage text")
-                        .font(.caption.bold())
-                        .foregroundStyle(warmBrown.opacity(0.75))
+                        .studyFont(12, weight: .bold)
+                        .foregroundStyle(colors.accent.opacity(0.75))
                         .tracking(0.8)
                     Text(message)
-                        .font(.caption)
+                        .studyFont(12)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -171,7 +172,7 @@ private struct ESVErrorCard: View {
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(.white)
+        .background(colors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
     }
@@ -186,7 +187,7 @@ private struct ESVKeyPromptCard: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Add your free ESV API key to view passage text.")
-                    .font(.subheadline)
+                    .studyFont(15)
                     .foregroundStyle(.secondary)
                 Button("Open Settings") { showSettings = true }
                     .buttonStyle(.bordered)
@@ -194,7 +195,7 @@ private struct ESVKeyPromptCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
             Label("ESV", systemImage: "text.book.closed")
-                .font(.caption.bold())
+                .studyFont(12, weight: .bold)
                 .foregroundStyle(.secondary)
         }
         .sheet(isPresented: $showSettings) { SettingsView() }
@@ -209,19 +210,20 @@ private struct StudyCard<Content: View>: View {
     let accentColor: Color
     var aiGenerated: Bool = false
     @ViewBuilder let content: () -> Content
+    @Environment(\.appColors) private var colors
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.subheadline.weight(.semibold))
+                    .studyFont(15, weight: .semibold)
                     .foregroundStyle(accentColor)
                 Text(title)
-                    .font(.headline)
+                    .studyFont(17, weight: .semibold)
                     .foregroundStyle(accentColor)
                 if aiGenerated {
                     Image(systemName: "sparkles")
-                        .font(.caption)
+                        .studyFont(12)
                         .foregroundStyle(accentColor.opacity(0.5))
                 }
             }
@@ -230,7 +232,7 @@ private struct StudyCard<Content: View>: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
-        .background(.white)
+        .background(colors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
     }
@@ -241,12 +243,13 @@ private struct StudyCard<Content: View>: View {
 private struct HistoricalBackgroundCard: View {
     let text: String
     var error: String? = nil
+    @Environment(\.appColors) private var colors
 
     var body: some View {
         StudyCard(
             icon: "building.columns",
             title: "Historical Background",
-            accentColor: Color(red: 0.6, green: 0.35, blue: 0.1),
+            accentColor: colors.accentSecondary,
             aiGenerated: true
         ) {
             if let err = error {
@@ -266,17 +269,15 @@ private struct HistoricalBackgroundCard: View {
 
 private struct CrossReferencesCard: View {
     let refs: [CrossRef]
-    let loaded: Bool    // true once the cross-ref phase is done (refs may still be empty)
+    let loaded: Bool
     var error: String? = nil
 
     var body: some View {
-        // Hide only after loading finishes and TSK found nothing
         if !loaded || !refs.isEmpty {
             StudyCard(icon: "link", title: "Cross-References", accentColor: .green, aiGenerated: true) {
                 if !loaded {
                     SectionLoadingView()
                 } else if let err = error, refs.allSatisfy({ $0.explanation.isEmpty }) {
-                    // Show error only if we have no explanations at all
                     AIErrorView(message: err)
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
@@ -285,11 +286,11 @@ private struct CrossReferencesCard: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack {
                                         Text(ref.reference)
-                                            .font(.headline)
+                                            .studyFont(17, weight: .semibold)
                                             .foregroundStyle(.primary)
                                         Spacer()
                                         Image(systemName: "chevron.right")
-                                            .font(.caption2)
+                                            .studyFont(11)
                                             .foregroundStyle(.tertiary)
                                     }
                                     if !ref.explanation.isEmpty {
@@ -322,9 +323,9 @@ private struct AIErrorView: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.triangle")
                 .foregroundStyle(.orange)
-                .font(.subheadline)
+                .studyFont(15)
             Text(message)
-                .font(.subheadline)
+                .studyFont(15)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -339,10 +340,27 @@ private struct SectionLoadingView: View {
         HStack(spacing: 10) {
             ProgressView()
             Text("Generating…")
-                .font(.subheadline)
+                .studyFont(15)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+    }
+}
+
+private struct StudyScaledFontModifier: ViewModifier {
+    @ObservedObject private var fontSizeStore = FontSizeStore.shared
+
+    let size: CGFloat
+    let weight: Font.Weight
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: fontSizeStore.scaled(size), weight: weight))
+    }
+}
+
+private extension View {
+    func studyFont(_ size: CGFloat, weight: Font.Weight = .regular) -> some View {
+        modifier(StudyScaledFontModifier(size: size, weight: weight))
     }
 }

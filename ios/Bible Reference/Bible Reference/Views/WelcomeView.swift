@@ -4,12 +4,18 @@
 
 import SwiftUI
 
-private let parchment = Color(red: 0xFA / 255.0, green: 0xF6 / 255.0, blue: 0xEF / 255.0)
-private let warmBrown = Color(red: 0.45, green: 0.28, blue: 0.08)
-
 struct WelcomeView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("has_seen_welcome_v1") private var hasSeenWelcome = false
+
+    private var colors: AppColors {
+        switch ThemeStore.shared.mode {
+        case .light:  return .light
+        case .dark:   return .dark
+        case .system: return AppColors.resolved(for: colorScheme)
+        }
+    }
 
     private var esvKeyIsSet: Bool {
         if let key = KeychainService.loadESVKey(), !key.isEmpty { return true }
@@ -92,7 +98,7 @@ struct WelcomeView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 8) {
                             Image(systemName: "sparkles")
-                                .foregroundStyle(warmBrown)
+                                .foregroundStyle(colors.accent)
                             Text("A Note on AI")
                                 .font(.title3.bold())
                         }
@@ -150,7 +156,7 @@ struct WelcomeView: View {
                 .padding()
             }
             .scrollContentBackground(.hidden)
-            .background(parchment.ignoresSafeArea())
+            .background(colors.background.ignoresSafeArea())
             .navigationTitle("Daily Kairos")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -159,7 +165,8 @@ struct WelcomeView: View {
                 }
             }
         }
-        .tint(warmBrown)
+        .environment(\.appColors, colors)
+        .tint(colors.accent)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
@@ -170,6 +177,8 @@ struct WelcomeView: View {
 private let esvSignupURL = URL(string: "https://api.esv.org/login/?next=/account/create-application/")!
 
 private struct ESVSetupCard: View {
+    @Environment(\.appColors) private var colors
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
 
@@ -177,11 +186,11 @@ private struct ESVSetupCard: View {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(warmBrown.opacity(0.12))
+                        .fill(colors.accent.opacity(0.12))
                         .frame(width: 44, height: 44)
                     Image(systemName: "text.book.closed")
                         .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(warmBrown)
+                        .foregroundStyle(colors.accent)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -189,7 +198,7 @@ private struct ESVSetupCard: View {
                         .font(.subheadline.bold())
                     Text("One-time setup required")
                         .font(.caption)
-                        .foregroundStyle(warmBrown.opacity(0.8))
+                        .foregroundStyle(colors.accent.opacity(0.8))
                 }
                 Spacer()
             }
@@ -215,7 +224,7 @@ private struct ESVSetupCard: View {
                         .foregroundStyle(.primary)
                 }
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(warmBrown)
+                .foregroundStyle(colors.accent)
 
                 Link(destination: esvSignupURL) {
                     HStack(spacing: 6) {
@@ -228,16 +237,16 @@ private struct ESVSetupCard: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .frame(maxWidth: .infinity)
-                    .background(warmBrown, in: RoundedRectangle(cornerRadius: 10))
+                    .background(colors.accent, in: RoundedRectangle(cornerRadius: 10))
                 }
                 .padding(.top, 4)
             }
         }
         .padding(14)
-        .background(.white)
+        .background(colors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(warmBrown.opacity(0.35), lineWidth: 1.5))
-        .shadow(color: warmBrown.opacity(0.12), radius: 6, x: 0, y: 2)
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(colors.accent.opacity(0.35), lineWidth: 1.5))
+        .shadow(color: colors.accent.opacity(0.12), radius: 6, x: 0, y: 2)
     }
 }
 
@@ -248,16 +257,17 @@ private struct WelcomeCardRow: View {
     let title: String
     let description: String
     let isAI: Bool
+    @Environment(\.appColors) private var colors
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(warmBrown.opacity(0.10))
+                    .fill(colors.accent.opacity(0.10))
                     .frame(width: 44, height: 44)
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(warmBrown)
+                    .foregroundStyle(colors.accent)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -267,10 +277,10 @@ private struct WelcomeCardRow: View {
                     if isAI {
                         Label("AI", systemImage: "sparkles")
                             .font(.caption2.bold())
-                            .foregroundStyle(warmBrown)
+                            .foregroundStyle(colors.accent)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(warmBrown.opacity(0.10), in: Capsule())
+                            .background(colors.accent.opacity(0.10), in: Capsule())
                     }
                     Spacer()
                 }
@@ -282,7 +292,7 @@ private struct WelcomeCardRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
-        .background(.white)
+        .background(colors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.06), radius: 5, x: 0, y: 2)
     }

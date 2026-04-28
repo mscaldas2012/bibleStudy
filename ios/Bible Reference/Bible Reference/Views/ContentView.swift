@@ -4,21 +4,31 @@
 import SwiftUI
 
 struct ContentView: View {
+    var splashVisible: Bool = false
+
     @State private var viewModel = StudyViewModel()
     @State private var columnVisibility = NavigationSplitViewVisibility.all
-    @State private var showDetail = false           // iPhone: whether DetailView is pushed
-    @State private var detailPath = NavigationPath() // tracks cross-ref drill depth
+    @State private var showDetail = false
+    @State private var detailPath = NavigationPath()
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(StreakStore.self) private var streakStore
     @AppStorage("has_seen_welcome_v1") private var hasSeenWelcome = false
     @State private var showWelcome = false
+
+    private var activeColors: AppColors {
+        switch ThemeStore.shared.mode {
+        case .light:  return .light
+        case .dark:   return .dark
+        case .system: return AppColors.resolved(for: colorScheme)
+        }
+    }
 
     var body: some View {
         @Bindable var streakStore = streakStore
 
         Group {
             if sizeClass == .compact {
-                // iPhone: NavigationStack — push DetailView when a lookup starts
                 NavigationStack(path: $detailPath) {
                     SidebarView()
                         .navigationDestination(isPresented: $showDetail) {
@@ -27,12 +37,11 @@ struct ContentView: View {
                 }
                 .onChange(of: viewModel.isLoading) { _, loading in
                     if loading {
-                        detailPath = NavigationPath() // pop any cross-ref views first
+                        detailPath = NavigationPath()
                         showDetail = true
                     }
                 }
             } else {
-                // iPad / Mac Designed for iPad: side-by-side split view
                 NavigationSplitView(columnVisibility: $columnVisibility) {
                     SidebarView()
                         .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 420)
@@ -43,15 +52,14 @@ struct ContentView: View {
                 }
                 .navigationSplitViewStyle(.balanced)
                 .onChange(of: viewModel.isLoading) { _, loading in
-                    if loading { detailPath = NavigationPath() } // pop cross-ref views on new lookup
+                    if loading { detailPath = NavigationPath() }
                 }
             }
         }
-        .preferredColorScheme(.light)
+        .preferredColorScheme(ThemeStore.shared.preferredColorScheme)
+        .environment(\.appColors, activeColors)
         .environment(viewModel)
         .environment(HistoryStore.shared)
-        // Celebration is blocked while the welcome sheet is visible.
-        // When welcome dismisses, pendingCelebration is still set → sheet surfaces automatically.
         .sheet(item: Binding(
             get: { showWelcome ? nil : streakStore.pendingCelebration },
             set: { if $0 == nil { streakStore.dismissCelebration() } }
@@ -61,8 +69,8 @@ struct ContentView: View {
         .sheet(isPresented: $showWelcome) {
             WelcomeView()
         }
-        .onAppear {
-            if !hasSeenWelcome {
+        .onChange(of: splashVisible) { _, isVisible in
+            if !isVisible && !hasSeenWelcome {
                 showWelcome = true
             }
         }
