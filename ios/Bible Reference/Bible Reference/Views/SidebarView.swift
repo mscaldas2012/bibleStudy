@@ -7,9 +7,12 @@ import Speech
 struct SidebarView: View {
     @Environment(StudyViewModel.self) private var viewModel
     @Environment(HistoryStore.self) private var history
+    @Environment(\.appColors) private var colors
+    @ObservedObject private var fontSizeStore = FontSizeStore.shared
     @FocusState private var fieldFocused: Bool
     @State private var showSettings = false
     @State private var showBiblePicker = false
+    @State private var showFontSize = false
 
     var body: some View {
         @Bindable var vm = viewModel
@@ -82,7 +85,7 @@ struct SidebarView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.45, green: 0.28, blue: 0.08))
+                .tint(colors.accent)
                 .controlSize(.large)
                 .disabled(
                     viewModel.referenceInput.trimmingCharacters(in: .whitespaces).isEmpty
@@ -114,10 +117,19 @@ struct SidebarView: View {
             }
             .padding()
         }
+        .dynamicTypeSize(fontSizeStore.currentSize)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { showSettings = true } label: {
                     Image(systemName: "gear")
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button { showFontSize.toggle() } label: {
+                    Image(systemName: "textformat.size")
+                }
+                .popover(isPresented: $showFontSize, arrowEdge: .top) {
+                    FontSizePopover()
                 }
             }
         }
@@ -162,6 +174,7 @@ private struct MicButton: View {
 
 private struct ExampleGroup: View {
     @Environment(StudyViewModel.self) private var viewModel
+    @Environment(\.appColors) private var colors
     let label: String
     let examples: [String]
 
@@ -178,7 +191,7 @@ private struct ExampleGroup: View {
                 }
                 .font(.caption)
                 .buttonStyle(.plain)
-                .foregroundStyle(historyWarmBrown)
+                .foregroundStyle(colors.accent)
             }
         }
     }
@@ -186,11 +199,10 @@ private struct ExampleGroup: View {
 
 // MARK: - History list
 
-private let historyWarmBrown = Color(red: 0.45, green: 0.28, blue: 0.08)
-
 private struct HistoryList: View {
     @Environment(StudyViewModel.self) private var viewModel
     @Environment(HistoryStore.self) private var history
+    @Environment(\.appColors) private var colors
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -211,7 +223,7 @@ private struct HistoryList: View {
                     }
                 }
             }
-            .background(.white)
+            .background(colors.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .shadow(color: .black.opacity(0.06), radius: 5, x: 0, y: 2)
         }
@@ -221,6 +233,7 @@ private struct HistoryList: View {
 private struct HistoryRow: View {
     let entry: HistoryEntry
     let action: () -> Void
+    @Environment(\.appColors) private var colors
 
     private var dateLabel: String {
         let cal = Calendar.current
@@ -234,11 +247,11 @@ private struct HistoryRow: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(historyWarmBrown.opacity(0.10))
+                        .fill(colors.accent.opacity(0.10))
                         .frame(width: 36, height: 36)
                     Image(systemName: "book.closed")
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(historyWarmBrown)
+                        .foregroundStyle(colors.accent)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -260,5 +273,42 @@ private struct HistoryRow: View {
             .padding(.vertical, 10)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Font size popover
+
+private struct FontSizePopover: View {
+    @Environment(\.appColors) private var colors
+    @ObservedObject private var store = FontSizeStore.shared
+
+    var body: some View {
+        HStack(spacing: 20) {
+            Button { store.decrease() } label: {
+                Image(systemName: "textformat.size.smaller")
+                    .font(.title3)
+                    .foregroundStyle(store.canDecrease ? colors.accent : colors.accent.opacity(0.25))
+            }
+            .disabled(!store.canDecrease)
+
+            HStack(spacing: 4) {
+                ForEach(0..<FontSizeStore.sizes.count, id: \.self) { i in
+                    Capsule()
+                        .fill(i == store.sizeIndex ? colors.accent : colors.accent.opacity(0.2))
+                        .frame(width: 6, height: i == store.sizeIndex ? 18 : 10)
+                        .animation(.spring(duration: 0.2), value: store.sizeIndex)
+                }
+            }
+
+            Button { store.increase() } label: {
+                Image(systemName: "textformat.size.larger")
+                    .font(.title3)
+                    .foregroundStyle(store.canIncrease ? colors.accent : colors.accent.opacity(0.25))
+            }
+            .disabled(!store.canIncrease)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .presentationCompactAdaptation(.popover)
     }
 }

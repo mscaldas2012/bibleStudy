@@ -7,6 +7,8 @@ import SwiftUI
 import UIKit
 
 struct SelectableText: UIViewRepresentable {
+    @ObservedObject private var fontSizeStore = FontSizeStore.shared
+
     let text: String
     var font: UIFont = .preferredFont(forTextStyle: .body)
     var lineSpacing: CGFloat = 5
@@ -27,19 +29,25 @@ struct SelectableText: UIViewRepresentable {
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView tv: UITextView, context: Context) -> CGSize? {
-        let width = proposal.width ?? UIScreen.main.bounds.width
+        let width = proposal.width ?? tv.bounds.width
+        guard width > 0 else { return nil }
         let size = tv.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
         return CGSize(width: width, height: size.height)
     }
 
     func updateUIView(_ tv: UITextView, context: Context) {
         let para = NSMutableParagraphStyle()
-        para.lineSpacing = lineSpacing
+        para.lineSpacing = fontSizeStore.scaled(lineSpacing)
 
-        let resolvedFont: UIFont = italic
-            ? (UIFont(descriptor: font.fontDescriptor.withSymbolicTraits(.traitItalic) ?? font.fontDescriptor, size: font.pointSize))
+        let baseFont: UIFont = italic
+            ? UIFont(
+                descriptor: font.fontDescriptor.withSymbolicTraits(.traitItalic) ?? font.fontDescriptor,
+                size: font.pointSize
+            )
             : font
+        let resolvedFont = baseFont.withSize(fontSizeStore.scaled(baseFont.pointSize))
 
+        tv.adjustsFontForContentSizeCategory = true
         tv.attributedText = NSAttributedString(string: text, attributes: [
             .font: resolvedFont,
             .paragraphStyle: para,
