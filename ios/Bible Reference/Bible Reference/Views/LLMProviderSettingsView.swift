@@ -2,12 +2,21 @@
 /// Main screen for managing LLM provider configurations.
 
 import SwiftUI
+import FoundationModels
 
 struct LLMProviderSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var store = LLMProviderStore.shared
     @State private var showAddSheet: ProviderType? = nil
     @State private var editConfig: LLMProviderConfig? = nil
+
+    private var appleIntelligenceAvailable: Bool {
+        #if targetEnvironment(simulator)
+        return false
+        #else
+        return SystemLanguageModel.default.isAvailable
+        #endif
+    }
 
     var body: some View {
         NavigationStack {
@@ -16,17 +25,26 @@ struct LLMProviderSettingsView: View {
                 Section {
                     HStack {
                         Image(systemName: activeIconName)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(store.activeConfig == nil && !appleIntelligenceAvailable ? Color.secondary : Color.blue)
                             .frame(width: 28)
                         VStack(alignment: .leading) {
-                            Text(store.activeDisplayName)
-                                .fontWeight(.semibold)
                             if let cfg = store.activeConfig {
+                                Text(cfg.displayName)
+                                    .fontWeight(.semibold)
                                 Text(cfg.model)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                            } else {
+                            } else if appleIntelligenceAvailable {
+                                Text("On-Device AI (Default)")
+                                    .fontWeight(.semibold)
                                 Text("Runs entirely on your device — no API key required")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("None")
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.secondary)
+                                Text("Add a provider below to enable AI features")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -112,7 +130,8 @@ struct LLMProviderSettingsView: View {
     }
 
     private var activeIconName: String {
-        store.activeConfig?.type.systemIconName ?? "iphone"
+        if let config = store.activeConfig { return config.type.systemIconName }
+        return appleIntelligenceAvailable ? "iphone" : "slash.circle"
     }
 }
 
