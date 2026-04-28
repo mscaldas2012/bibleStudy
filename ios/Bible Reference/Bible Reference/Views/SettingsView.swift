@@ -2,10 +2,20 @@
 /// Settings sheet — API key, AI provider, appearance, and streak options.
 
 import SwiftUI
+import FoundationModels
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+
+    private var activeProviderLabel: String {
+        if let name = LLMProviderStore.shared.activeConfig?.displayName { return name }
+        #if targetEnvironment(simulator)
+        return "None"
+        #else
+        return SystemLanguageModel.default.isAvailable ? "On-Device AI" : "None"
+        #endif
+    }
 
     private var colors: AppColors {
         switch ThemeStore.shared.mode {
@@ -65,7 +75,7 @@ struct SettingsView: View {
                         HStack {
                             Label("AI Provider", systemImage: "brain")
                             Spacer()
-                            Text(LLMProviderStore.shared.activeDisplayName)
+                            Text(activeProviderLabel)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Image(systemName: "chevron.right")

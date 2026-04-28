@@ -3,11 +3,13 @@
 /// Can always be reopened from Settings → About Daily Kairos.
 
 import SwiftUI
+import FoundationModels
 
 struct WelcomeView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("has_seen_welcome_v1") private var hasSeenWelcome = false
+    @State private var store = LLMProviderStore.shared
 
     private var colors: AppColors {
         switch ThemeStore.shared.mode {
@@ -20,6 +22,14 @@ struct WelcomeView: View {
     private var esvKeyIsSet: Bool {
         if let key = KeychainService.loadESVKey(), !key.isEmpty { return true }
         return false
+    }
+
+    private var needsAIProviderSetup: Bool {
+        #if targetEnvironment(simulator)
+        return store.activeConfig == nil
+        #else
+        return !SystemLanguageModel.default.isAvailable && store.activeConfig == nil
+        #endif
     }
 
     var body: some View {
@@ -52,6 +62,10 @@ struct WelcomeView: View {
                     }
 
                     VStack(spacing: 14) {
+                        if needsAIProviderSetup {
+                            AIProviderSetupCard()
+                        }
+
                         if esvKeyIsSet {
                             WelcomeCardRow(
                                 icon: "text.book.closed",
@@ -169,6 +183,66 @@ struct WelcomeView: View {
         .tint(colors.accent)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - AI provider setup card
+
+private struct AIProviderSetupCard: View {
+    @Environment(\.appColors) private var colors
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            // Header row
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(colors.accent.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(colors.accent)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("AI Features")
+                        .font(.subheadline.bold())
+                    Text("One-time setup required")
+                        .font(.caption)
+                        .foregroundStyle(colors.accent.opacity(0.8))
+                }
+                Spacer()
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("This device doesn't support Apple Intelligence. To use AI-generated study cards, connect an external AI provider:")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(3)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Tap Settings (⚙️ top right)", systemImage: "1.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    Label("Tap \"AI Provider\"", systemImage: "2.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    Label("Add Anthropic, OpenAI, Gemini, or a custom provider", systemImage: "3.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                }
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(colors.accent)
+            }
+        }
+        .padding(14)
+        .background(colors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(colors.accent.opacity(0.35), lineWidth: 1.5))
+        .shadow(color: colors.accent.opacity(0.12), radius: 6, x: 0, y: 2)
     }
 }
 
