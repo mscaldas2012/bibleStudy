@@ -4,7 +4,10 @@
 
 import Foundation
 import Observation
+import OSLog
 import Speech
+
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "BibleReference", category: "StudyViewModel")
 
 @Observable
 final class StudyViewModel {
@@ -156,7 +159,9 @@ final class StudyViewModel {
                 let result = try await bibleAI.analyzeContext(reference: ref, verseText: verseText)
                 currentNote?.context = result.context
                 currentNote?.applications = result.applications
+                logger.info("Context+Applications loaded for \(ref.displayTitle)")
             } catch {
+                logger.error("Context+Applications failed for \(ref.displayTitle): \(error)")
                 currentNote?.contextError = error.localizedDescription
             }
 
@@ -164,7 +169,9 @@ final class StudyViewModel {
             do {
                 let result = try await bibleAI.analyzeHistory(reference: ref, verseText: verseText)
                 currentNote?.historicalBackground = result.historicalBackground
+                logger.info("Historical background loaded for \(ref.displayTitle)")
             } catch {
+                logger.error("Historical background failed for \(ref.displayTitle): \(error)")
                 currentNote?.historyError = error.localizedDescription
             }
 
@@ -180,7 +187,9 @@ final class StudyViewModel {
                         refs[i].explanation = result.crossRefExplanations[i]
                     }
                     currentNote?.crossReferences = refs
+                    logger.info("Cross-references loaded for \(ref.displayTitle)")
                 } catch {
+                    logger.error("Cross-references failed for \(ref.displayTitle): \(error)")
                     currentNote?.crossRefError = error.localizedDescription
                 }
             }
@@ -209,5 +218,60 @@ final class StudyViewModel {
         pendingHistoryQuery = entry.query
         referenceInput = entry.displayTitle
         await submit()
+    }
+
+    // MARK: - Per-section retries
+
+    func retryContext() async {
+        guard let note = currentNote else { return }
+        currentNote?.contextError = nil
+        currentNote?.context = ""
+        currentNote?.applications = []
+        do {
+            let result = try await bibleAI.analyzeContext(reference: note.reference, verseText: note.verseText)
+            currentNote?.context = result.context
+            currentNote?.applications = result.applications
+        } catch {
+            currentNote?.contextError = error.localizedDescription
+        }
+    }
+
+    func retryHistory() async {
+        guard let note = currentNote else { return }
+        currentNote?.historyError = nil
+        currentNote?.historicalBackground = ""
+        do {
+            let result = try await bibleAI.analyzeHistory(reference: note.reference, verseText: note.verseText)
+            currentNote?.historicalBackground = result.historicalBackground
+        } catch {
+            currentNote?.historyError = error.localizedDescription
+        }
+    }
+
+    func retryCrossRefs() async {
+        guard let note = currentNote else { return }
+        currentNote?.crossRefError = nil
+        currentNote?.crossRefsLoaded = false
+        let crossRefs = note.crossReferences.isEmpty
+            ? await tskService.fetchRefs(for: note.reference)
+            : note.crossReferences
+        guard !crossRefs.isEmpty else {
+            currentNote?.crossRefsLoaded = true
+            return
+        }
+        if currentNote?.crossReferences.isEmpty == true {
+            currentNote?.crossReferences = crossRefs
+        }
+        do {
+            let result = try await bibleAI.analyzeCrossRefs(reference: note.reference, crossRefs: crossRefs)
+            var refs = crossRefs
+            for i in refs.indices where i < result.crossRefExplanations.count {
+                refs[i].explanation = result.crossRefExplanations[i]
+            }
+            currentNote?.crossReferences = refs
+        } catch {
+            currentNote?.crossRefError = error.localizedDescription
+        }
+        currentNote?.crossRefsLoaded = true
     }
 }

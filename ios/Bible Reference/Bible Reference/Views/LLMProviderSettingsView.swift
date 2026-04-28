@@ -47,13 +47,11 @@ struct LLMProviderSettingsView: View {
                             ProviderRow(cfg: cfg,
                                         isActive: cfg.id == store.activeId,
                                         onActivate: { store.activate(cfg.id) },
-                                        onEdit: { editConfig = cfg })
-                        }
-                        .onDelete { offsets in
-                            offsets.map { store.configs[$0] }.forEach { store.remove($0) }
+                                        onEdit: { editConfig = cfg },
+                                        onDelete: { store.remove(cfg) })
                         }
                     } header: { Text("Saved Providers") }
-                      footer: { Text("Swipe left to delete. Tap to set active.") }
+                      footer: { Text("Tap to set active. Swipe for actions.") }
                 }
 
                 // MARK: Add provider
@@ -125,6 +123,7 @@ private struct ProviderRow: View {
     let isActive: Bool
     let onActivate: () -> Void
     let onEdit: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         HStack {
@@ -146,8 +145,13 @@ private struct ProviderRow: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { onActivate() }
-        .swipeActions(edge: .leading) {
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
             Button("Edit") { onEdit() }.tint(.blue)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) { onDelete() } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
 }

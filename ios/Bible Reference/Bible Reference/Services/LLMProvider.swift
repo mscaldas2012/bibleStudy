@@ -39,8 +39,10 @@ enum LLMError: LocalizedError {
             return "Couldn't reach the provider. Check your connection."
         case .modelNotFound(let model):
             return "Model \"\(model)\" not found on this provider. Check the model name."
+        case .httpError(_, let body) where !body.isEmpty:
+            return body
         case .httpError(let code, _):
-            return "Something went wrong (HTTP \(code)). Tap to copy error details."
+            return "Something went wrong (HTTP \(code)). Try again or choose a different model."
         case .parseError:
             return "Couldn't parse the response from the provider."
         case .notConfigured:
