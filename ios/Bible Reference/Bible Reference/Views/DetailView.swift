@@ -7,6 +7,7 @@ struct DetailView: View {
     @Environment(StudyViewModel.self) private var viewModel
     @Environment(\.appColors) private var colors
     @ObservedObject private var fontSizeStore = FontSizeStore.shared
+    @State private var showFontSize = false
 
     var body: some View {
         Group {
@@ -51,6 +52,53 @@ struct DetailView: View {
         .navigationDestination(for: String.self) { refString in
             CrossRefPassageView(referenceString: refString)
         }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { showFontSize.toggle() } label: {
+                    Image(systemName: "textformat.size")
+                }
+                .popover(isPresented: $showFontSize, arrowEdge: .top) {
+                    FontSizePopover()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Font size popover
+
+private struct FontSizePopover: View {
+    @Environment(\.appColors) private var colors
+    @ObservedObject private var store = FontSizeStore.shared
+
+    var body: some View {
+        HStack(spacing: 20) {
+            Button { store.decrease() } label: {
+                Image(systemName: "textformat.size.smaller")
+                    .font(.title3)
+                    .foregroundStyle(store.canDecrease ? colors.accent : colors.accent.opacity(0.25))
+            }
+            .disabled(!store.canDecrease)
+
+            HStack(spacing: 4) {
+                ForEach(0..<FontSizeStore.sizes.count, id: \.self) { i in
+                    Capsule()
+                        .fill(i == store.sizeIndex ? colors.accent : colors.accent.opacity(0.2))
+                        .frame(width: 6, height: i == store.sizeIndex ? 18 : 10)
+                        .animation(.spring(duration: 0.2), value: store.sizeIndex)
+                }
+            }
+
+            Button { store.increase() } label: {
+                Image(systemName: "textformat.size.larger")
+                    .font(.title3)
+                    .foregroundStyle(store.canIncrease ? colors.accent : colors.accent.opacity(0.25))
+            }
+            .disabled(!store.canIncrease)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .presentationCompactAdaptation(.popover)
     }
 }
 

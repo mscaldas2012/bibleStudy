@@ -12,7 +12,6 @@ struct SidebarView: View {
     @FocusState private var fieldFocused: Bool
     @State private var showSettings = false
     @State private var showBiblePicker = false
-    @State private var showFontSize = false
 
     var body: some View {
         @Bindable var vm = viewModel
@@ -122,14 +121,6 @@ struct SidebarView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button { showSettings = true } label: {
                     Image(systemName: "gear")
-                }
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button { showFontSize.toggle() } label: {
-                    Image(systemName: "textformat.size")
-                }
-                .popover(isPresented: $showFontSize, arrowEdge: .top) {
-                    FontSizePopover()
                 }
             }
         }
@@ -276,39 +267,3 @@ private struct HistoryRow: View {
     }
 }
 
-// MARK: - Font size popover
-
-private struct FontSizePopover: View {
-    @Environment(\.appColors) private var colors
-    @ObservedObject private var store = FontSizeStore.shared
-
-    var body: some View {
-        HStack(spacing: 20) {
-            Button { store.decrease() } label: {
-                Image(systemName: "textformat.size.smaller")
-                    .font(.title3)
-                    .foregroundStyle(store.canDecrease ? colors.accent : colors.accent.opacity(0.25))
-            }
-            .disabled(!store.canDecrease)
-
-            HStack(spacing: 4) {
-                ForEach(0..<FontSizeStore.sizes.count, id: \.self) { i in
-                    Capsule()
-                        .fill(i == store.sizeIndex ? colors.accent : colors.accent.opacity(0.2))
-                        .frame(width: 6, height: i == store.sizeIndex ? 18 : 10)
-                        .animation(.spring(duration: 0.2), value: store.sizeIndex)
-                }
-            }
-
-            Button { store.increase() } label: {
-                Image(systemName: "textformat.size.larger")
-                    .font(.title3)
-                    .foregroundStyle(store.canIncrease ? colors.accent : colors.accent.opacity(0.25))
-            }
-            .disabled(!store.canIncrease)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .presentationCompactAdaptation(.popover)
-    }
-}
