@@ -7,21 +7,23 @@ struct AnthropicSetupView: View {
     @Environment(\.dismiss) private var dismiss
     let editing: LLMProviderConfig?
 
-    @State private var apiKey    = ""
-    @State private var model     = AnthropicModels.defaultModel
-    @State private var customModel = ""
-    @State private var useCustom = false
+    @State private var apiKey     = ""
+    @State private var model      = AnthropicModels.defaultModel
     @State private var verifyState: VerifyState = .idle
-    @State private var configID  = UUID()
+    @State private var configID   = UUID()
+
+    @State private var fetchedModels: [String] = []
+    @State private var isFetchingModels = false
 
     enum VerifyState { case idle, verifying, success(String), failure(String) }
 
-    private var selectedModel: String { useCustom ? customModel : model }
+    private var pickerModels: [(id: String, label: String)] {
+        fetchedModels.map { (id: $0, label: $0) }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                // Info
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("An API key gives Daily Kairos access to Claude models on your Anthropic account. Usage is billed to your account.")
@@ -34,55 +36,55 @@ struct AnthropicSetupView: View {
                     .padding(.vertical, 4)
                 }
 
-                // API Key
                 Section {
                     SecureField("sk-ant-…", text: $apiKey)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
+                        .onChange(of: apiKey) { _, newKey in
+                            let trimmed = newKey.trimmingCharacters(in: .whitespaces)
+                            guard trimmed.count > 20 else {
+                                fetchedModels = []
+                                return
+                            }
+                            Task { await fetchModels(key: trimmed) }
+                        }
                 } header: { Text("API Key") }
 
-                // Model
                 Section {
-                    Picker("Model", selection: $model) {
-                        ForEach(AnthropicModels.curated, id: \.id) { m in
-                            Text(m.label).tag(m.id)
+                    if isFetchingModels {
+                        HStack(spacing: 8) {
+                            ProgressView().scaleEffect(0.8)
+                            Text("Loading available models…")
+                                .font(.subheadline).foregroundStyle(.secondary)
                         }
-                    }
-                    Toggle("Use custom model ID", isOn: $useCustom)
-                    if useCustom {
-                        TextField("claude-…", text: $customModel)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.never)
+                    } else if fetchedModels.isEmpty {
+                        Text("Enter your API key above to see available models.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    } else {
+                        Picker("Model", selection: $model) {
+                            ForEach(pickerModels, id: \.id) { m in
+                                Text(m.label).tag(m.id)
+                            }
+                        }
                     }
                 } header: { Text("Model") }
 
-                // Verify result
                 if case .success(let msg) = verifyState {
-                    Section {
-                        Label(msg, systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                    }
+                    Section { Label(msg, systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
                 }
                 if case .failure(let msg) = verifyState {
-                    Section {
-                        Label(msg, systemImage: "xmark.circle.fill")
-                            .foregroundStyle(.red)
-                    }
+                    Section { Label(msg, systemImage: "xmark.circle.fill").foregroundStyle(.red) }
                 }
             }
             .navigationTitle(editing == nil ? "Add Anthropic" : "Edit Anthropic")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    if case .verifying = verifyState {
-                        ProgressView()
-                    } else {
+                    if case .verifying = verifyState { ProgressView() }
+                    else {
                         Button("Verify & Save") { Task { await verifyAndSave() } }
-                            .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty ||
-                                      (useCustom && customModel.trimmingCharacters(in: .whitespaces).isEmpty))
+                            .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
             }
@@ -90,25 +92,34 @@ struct AnthropicSetupView: View {
         }
     }
 
+    private func fetchModels(key: String) async {
+        isFetchingModels = true
+        let tempCfg = LLMProviderConfig(type: .anthropic, displayName: "", model: model)
+        let provider = AnthropicProvider(config: tempCfg, apiKey: key)
+        let models = (try? await provider.fetchAvailableModels()) ?? []
+        isFetchingModels = false
+        guard !models.isEmpty else { return }
+        fetchedModels = models
+        if !models.contains(model) {
+            model = AnthropicModels.preferredModel(from: models)
+        }
+    }
+
     private func prefill() {
         guard let cfg = editing else { return }
-        configID  = cfg.id
-        model     = AnthropicModels.curated.contains(where: { $0.id == cfg.model }) ? cfg.model : AnthropicModels.defaultModel
-        useCustom = !AnthropicModels.curated.contains(where: { $0.id == cfg.model })
-        customModel = useCustom ? cfg.model : ""
-        apiKey = LLMProviderStore.shared.loadKey(for: cfg)
+        configID = cfg.id
+        model    = cfg.model
+        apiKey   = LLMProviderStore.shared.loadKey(for: cfg)
+        let key = apiKey.trimmingCharacters(in: .whitespaces)
+        if !key.isEmpty { Task { await fetchModels(key: key) } }
     }
 
     private func verifyAndSave() async {
         let key = apiKey.trimmingCharacters(in: .whitespaces)
         guard !key.isEmpty else { return }
         verifyState = .verifying
-
-        var cfg = LLMProviderConfig(type: .anthropic,
-                                    displayName: "Anthropic Claude",
-                                    model: selectedModel)
+        var cfg = LLMProviderConfig(type: .anthropic, displayName: "Anthropic Claude", model: model)
         cfg.id = configID
-
         let provider = AnthropicProvider(config: cfg, apiKey: key)
         do {
             let msg = try await provider.verify()
@@ -117,10 +128,7 @@ struct AnthropicSetupView: View {
             verifyState = .success(msg)
             try? await Task.sleep(for: .seconds(1))
             dismiss()
-        } catch let e as LLMError {
-            verifyState = .failure(e.errorDescription ?? "Unknown error")
-        } catch {
-            verifyState = .failure(error.localizedDescription)
-        }
+        } catch let e as LLMError { verifyState = .failure(e.errorDescription ?? "Unknown error") }
+          catch { verifyState = .failure(error.localizedDescription) }
     }
 }

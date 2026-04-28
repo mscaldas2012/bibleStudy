@@ -13,6 +13,18 @@ enum AnthropicModels {
         ("claude-haiku-3-5",   "Claude Haiku 3.5"),
     ]
     static let defaultModel = "claude-sonnet-4-5"
+
+    private static let preference = [
+        "claude-sonnet-4-5", "claude-haiku-4-5", "claude-opus-4-5",
+        "claude-sonnet-3-7", "claude-haiku-3-5", "claude-opus-3-7",
+    ]
+
+    static func preferredModel(from available: [String]) -> String {
+        for preferred in preference {
+            if available.contains(preferred) { return preferred }
+        }
+        return available.first ?? defaultModel
+    }
 }
 
 enum OpenAIModels {
@@ -27,6 +39,18 @@ enum OpenAIModels {
         ("o3-mini",         "o3 mini"),
     ]
     static let defaultModel = "gpt-4o-mini"
+
+    private static let preference = [
+        "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4",
+        "o3-mini", "o1", "o1-mini", "gpt-3.5-turbo",
+    ]
+
+    static func preferredModel(from available: [String]) -> String {
+        for preferred in preference {
+            if available.contains(preferred) { return preferred }
+        }
+        return available.first ?? defaultModel
+    }
 }
 
 enum GoogleModels {

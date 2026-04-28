@@ -48,6 +48,25 @@ struct AnthropicProvider: LLMProvider {
         return decoded.content.first(where: { $0.type == "text" })?.text ?? ""
     }
 
+    func fetchAvailableModels() async throws -> [String] {
+        let baseURL = config.baseURL.isEmpty ? "https://api.anthropic.com" : config.baseURL
+        guard let url = URL(string: "\(baseURL)/v1/models") else { return [] }
+        var req = URLRequest(url: url, timeoutInterval: 20)
+        req.setValue(apiKey,       forHTTPHeaderField: "x-api-key")
+        req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        let (data, resp) = try await URLSession.shared.safeData(for: req)
+        guard (resp as? HTTPURLResponse)?.statusCode == 200 else { return [] }
+        struct ModelList: Decodable {
+            struct Model: Decodable { let id: String }
+            let data: [Model]
+        }
+        let decoded = try JSONDecoder().decode(ModelList.self, from: data)
+        return decoded.data
+            .map(\.id)
+            .filter { $0.hasPrefix("claude-") }
+            .sorted()
+    }
+
     func verify() async throws -> String {
         let baseURL = config.baseURL.isEmpty ? "https://api.anthropic.com" : config.baseURL
         let url = URL(string: "\(baseURL)/v1/messages")!
