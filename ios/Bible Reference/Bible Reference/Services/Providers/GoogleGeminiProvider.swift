@@ -96,19 +96,39 @@ struct GoogleGeminiProvider: LLMProvider {
     }
 
     func verify() async throws -> String {
-        // GET /v1beta/models?key=<apiKey> — lists models, confirms auth
-        let urlStr = "\(baseURL)/v1beta/models?key=\(apiKey)"
-        guard let url = URL(string: urlStr) else {
-            throw LLMError.httpError(0, "Invalid URL.")
+        // Test the specific model with a minimal real generation — confirms both
+        // the key and that the chosen model ID is valid and accessible.
+        do {
+            let response = try await chat(
+                systemPrompt: "You are a helpful assistant.",
+                userPrompt: "Reply with exactly one word: hello"
+            )
+            guard !response.isEmpty else {
+                throw LLMError.httpError(200, "Model returned an empty response.")
+            }
+            return "Connected — \(config.model) is working."
+        } catch LLMError.modelNotFound {
+            throw LLMError.httpError(404, "\"\(config.model)\" isn't available on your account yet. Try \"Gemini 2.5 Flash\" from the model picker — it works with most paid accounts.")
         }
-        let req = URLRequest(url: url, timeoutInterval: 20)
+    }
 
-        let (data, resp) = try await URLSession.shared.safeData(for: req)
-        let http = resp as! HTTPURLResponse
-        guard http.statusCode == 200 else {
-            let bodyStr = String(data: data, encoding: .utf8) ?? ""
-            throw mapHTTPError(statusCode: http.statusCode, body: bodyStr, model: config.model)
+    func fetchAvailableModels() async throws -> [String] {
+        let urlStr = "\(baseURL)/v1beta/models?key=\(apiKey)"
+        guard let url = URL(string: urlStr) else { return [] }
+        let (data, resp) = try await URLSession.shared.safeData(for: URLRequest(url: url, timeoutInterval: 20))
+        guard (resp as? HTTPURLResponse)?.statusCode == 200 else { return [] }
+        struct ModelList: Decodable {
+            struct Model: Decodable {
+                let name: String
+                let supportedGenerationMethods: [String]
+            }
+            let models: [Model]
         }
-        return "Connected to Google Gemini. Model: \(config.model)"
+        let decoded = try JSONDecoder().decode(ModelList.self, from: data)
+        return decoded.models
+            .filter { $0.supportedGenerationMethods.contains("generateContent") }
+            .map { $0.name.replacingOccurrences(of: "models/", with: "") }
+            .filter { $0.hasPrefix("gemini") }
+            .sorted()
     }
 }

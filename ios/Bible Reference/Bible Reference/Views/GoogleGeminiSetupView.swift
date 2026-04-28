@@ -7,15 +7,20 @@ struct GoogleGeminiSetupView: View {
     @Environment(\.dismiss) private var dismiss
     let editing: LLMProviderConfig?
 
-    @State private var apiKey     = ""
-    @State private var model      = GoogleModels.defaultModel
-    @State private var customModel = ""
-    @State private var useCustom  = false
+    @State private var apiKey       = ""
+    @State private var model        = GoogleModels.defaultModel
     @State private var verifyState: VerifyState = .idle
-    @State private var configID   = UUID()
+    @State private var configID     = UUID()
+
+    // Live model list fetched from the API once a key is entered
+    @State private var fetchedModels: [String] = []
+    @State private var isFetchingModels = false
 
     enum VerifyState { case idle, verifying, success(String), failure(String) }
-    private var selectedModel: String { useCustom ? customModel : model }
+
+    private var pickerModels: [(id: String, label: String)] {
+        fetchedModels.map { (id: $0, label: $0) }
+    }
 
     var body: some View {
         NavigationStack {
@@ -33,19 +38,34 @@ struct GoogleGeminiSetupView: View {
 
                 Section {
                     SecureField("AIza…", text: $apiKey)
-                        .autocorrectionDisabled().textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .onChange(of: apiKey) { _, newKey in
+                            let trimmed = newKey.trimmingCharacters(in: .whitespaces)
+                            guard trimmed.count > 20 else {
+                                fetchedModels = []
+                                return
+                            }
+                            Task { await fetchModels(key: trimmed) }
+                        }
                 } header: { Text("API Key") }
 
                 Section {
-                    Picker("Model", selection: $model) {
-                        ForEach(GoogleModels.curated, id: \.id) { m in
-                            Text(m.label).tag(m.id)
+                    if isFetchingModels {
+                        HStack(spacing: 8) {
+                            ProgressView().scaleEffect(0.8)
+                            Text("Loading available models…")
+                                .font(.subheadline).foregroundStyle(.secondary)
                         }
-                    }
-                    Toggle("Use custom model ID", isOn: $useCustom)
-                    if useCustom {
-                        TextField("gemini-…", text: $customModel)
-                            .autocorrectionDisabled().textInputAutocapitalization(.never)
+                    } else if fetchedModels.isEmpty {
+                        Text("Enter your API key above to see available models.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    } else {
+                        Picker("Model", selection: $model) {
+                            ForEach(pickerModels, id: \.id) { m in
+                                Text(m.label).tag(m.id)
+                            }
+                        }
                     }
                 } header: { Text("Model") }
 
@@ -64,8 +84,7 @@ struct GoogleGeminiSetupView: View {
                     if case .verifying = verifyState { ProgressView() }
                     else {
                         Button("Verify & Save") { Task { await verifyAndSave() } }
-                            .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty ||
-                                      (useCustom && customModel.trimmingCharacters(in: .whitespaces).isEmpty))
+                            .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
             }
@@ -73,20 +92,41 @@ struct GoogleGeminiSetupView: View {
         }
     }
 
+    // MARK: - Fetch available models as soon as key looks plausible
+
+    private func fetchModels(key: String) async {
+        isFetchingModels = true
+        let tempCfg = LLMProviderConfig(type: .googleGemini, displayName: "", model: model)
+        let provider = GoogleGeminiProvider(config: tempCfg, apiKey: key)
+        let models = (try? await provider.fetchAvailableModels()) ?? []
+        isFetchingModels = false
+        guard !models.isEmpty else { return }
+        fetchedModels = models
+        // Keep current selection if it's available; otherwise pick the best default
+        if !models.contains(model) {
+            model = GoogleModels.preferredModel(from: models)
+        }
+    }
+
+    // MARK: - Prefill when editing
+
     private func prefill() {
         guard let cfg = editing else { return }
-        configID  = cfg.id
-        model     = GoogleModels.curated.contains(where: { $0.id == cfg.model }) ? cfg.model : GoogleModels.defaultModel
-        useCustom = !GoogleModels.curated.contains(where: { $0.id == cfg.model })
-        customModel = useCustom ? cfg.model : ""
-        apiKey    = LLMProviderStore.shared.loadKey(for: cfg)
+        configID = cfg.id
+        model    = cfg.model
+        apiKey   = LLMProviderStore.shared.loadKey(for: cfg)
+        // Trigger model fetch for the saved key
+        let key = apiKey.trimmingCharacters(in: .whitespaces)
+        if !key.isEmpty { Task { await fetchModels(key: key) } }
     }
+
+    // MARK: - Verify & save
 
     private func verifyAndSave() async {
         let key = apiKey.trimmingCharacters(in: .whitespaces)
         guard !key.isEmpty else { return }
         verifyState = .verifying
-        var cfg = LLMProviderConfig(type: .googleGemini, displayName: "Google Gemini", model: selectedModel)
+        var cfg = LLMProviderConfig(type: .googleGemini, displayName: "Google Gemini", model: model)
         cfg.id = configID
         let provider = GoogleGeminiProvider(config: cfg, apiKey: key)
         do {
@@ -96,7 +136,7 @@ struct GoogleGeminiSetupView: View {
             verifyState = .success(msg)
             try? await Task.sleep(for: .seconds(1))
             dismiss()
-        } catch let e as LLMError { verifyState = .failure(e.errorDescription ?? "Unknown error")
-        } catch { verifyState = .failure(error.localizedDescription) }
+        } catch let e as LLMError { verifyState = .failure(e.errorDescription ?? "Unknown error") }
+          catch { verifyState = .failure(error.localizedDescription) }
     }
 }

@@ -29,7 +29,12 @@ struct DetailView: View {
                     candidates: viewModel.topicCandidates
                 )
             } else if let note = viewModel.currentNote {
-                StudyNoteView(note: note)
+                StudyNoteView(
+                    note: note,
+                    onRetryContext: { await viewModel.retryContext() },
+                    onRetryHistory: { await viewModel.retryHistory() },
+                    onRetryCrossRefs: { await viewModel.retryCrossRefs() }
+                )
             } else {
                 ContentUnavailableView {
                     Label("Open a Passage", systemImage: "book.pages")

@@ -6,6 +6,9 @@ import SwiftUI
 
 struct StudyNoteView: View {
     let note: StudyNote
+    var onRetryContext: (() async -> Void)? = nil
+    var onRetryHistory: (() async -> Void)? = nil
+    var onRetryCrossRefs: (() async -> Void)? = nil
     @Environment(\.appColors) private var colors
     @ObservedObject private var fontSizeStore = FontSizeStore.shared
 
@@ -29,8 +32,8 @@ struct StudyNoteView: View {
                     accentColor: colors.accent,
                     aiGenerated: true
                 ) {
-                    if let err = note.contextError {
-                        AIErrorView(message: err)
+                    if note.contextError != nil {
+                        AIErrorView(onRetry: onRetryContext)
                     } else if note.context.isEmpty {
                         SectionLoadingView()
                     } else {
@@ -40,15 +43,15 @@ struct StudyNoteView: View {
                 }
                 .animation(.easeIn(duration: 0.4), value: note.context.isEmpty)
 
-                // Applications
+                // Applications — shares the same AI call as Context
                 StudyCard(
-                    icon: "sparkles",
+                    icon: "lightbulb",
                     title: "Applications",
                     accentColor: colors.accent,
-                    aiGenerated: false
+                    aiGenerated: true
                 ) {
                     if note.contextError != nil {
-                        EmptyView()
+                        AIErrorView(onRetry: onRetryContext)
                     } else if note.applications.isEmpty {
                         SectionLoadingView()
                     } else {
@@ -70,10 +73,19 @@ struct StudyNoteView: View {
                 .animation(.easeIn(duration: 0.4), value: note.applications.isEmpty)
 
                 // Historical background
-                HistoricalBackgroundCard(text: note.historicalBackground, error: note.historyError)
+                HistoricalBackgroundCard(
+                    text: note.historicalBackground,
+                    error: note.historyError,
+                    onRetry: onRetryHistory
+                )
 
                 // Cross-references
-                CrossReferencesCard(refs: note.crossReferences, loaded: note.crossRefsLoaded, error: note.crossRefError)
+                CrossReferencesCard(
+                    refs: note.crossReferences,
+                    loaded: note.crossRefsLoaded,
+                    error: note.crossRefError,
+                    onRetry: onRetryCrossRefs
+                )
 
                 // Disclaimer
                 HStack(alignment: .top, spacing: 6) {
@@ -243,6 +255,7 @@ private struct StudyCard<Content: View>: View {
 private struct HistoricalBackgroundCard: View {
     let text: String
     var error: String? = nil
+    var onRetry: (() async -> Void)? = nil
     @Environment(\.appColors) private var colors
 
     var body: some View {
@@ -252,8 +265,8 @@ private struct HistoricalBackgroundCard: View {
             accentColor: colors.accentSecondary,
             aiGenerated: true
         ) {
-            if let err = error {
-                AIErrorView(message: err)
+            if error != nil {
+                AIErrorView(onRetry: onRetry)
             } else if text.isEmpty {
                 SectionLoadingView()
             } else {
@@ -271,14 +284,15 @@ private struct CrossReferencesCard: View {
     let refs: [CrossRef]
     let loaded: Bool
     var error: String? = nil
+    var onRetry: (() async -> Void)? = nil
 
     var body: some View {
         if !loaded || !refs.isEmpty {
             StudyCard(icon: "link", title: "Cross-References", accentColor: .green, aiGenerated: true) {
                 if !loaded {
                     SectionLoadingView()
-                } else if let err = error, refs.allSatisfy({ $0.explanation.isEmpty }) {
-                    AIErrorView(message: err)
+                } else if error != nil, refs.allSatisfy({ $0.explanation.isEmpty }) {
+                    AIErrorView(onRetry: onRetry)
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(refs.enumerated()), id: \.element.id) { idx, ref in
@@ -317,16 +331,41 @@ private struct CrossReferencesCard: View {
 // MARK: - Inline AI error
 
 private struct AIErrorView: View {
-    let message: String
+    var onRetry: (() async -> Void)? = nil
+    @State private var isRetrying = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
-                .studyFont(15)
-            Text(message)
-                .studyFont(15)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                    .studyFont(15)
+                Text("AI couldn't retrieve this content. Please try again.")
+                    .studyFont(15)
+                    .foregroundStyle(.secondary)
+            }
+            if let onRetry {
+                Button {
+                    guard !isRetrying else { return }
+                    isRetrying = true
+                    Task {
+                        await onRetry()
+                        isRetrying = false
+                    }
+                } label: {
+                    if isRetrying {
+                        ProgressView()
+                            .scaleEffect(0.85)
+                            .frame(height: 20)
+                    } else {
+                        Label("Try Again", systemImage: "arrow.clockwise")
+                            .studyFont(14, weight: .medium)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(isRetrying)
+                .animation(.default, value: isRetrying)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)

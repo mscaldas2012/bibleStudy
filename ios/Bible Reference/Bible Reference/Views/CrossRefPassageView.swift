@@ -4,7 +4,10 @@
 /// renders on the very first frame — no blank flash before .task fires.
 /// CrossReferencesCard inside StudyNoteView pushes further refs recursively.
 
+import OSLog
 import SwiftUI
+
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "BibleReference", category: "CrossRefLoader")
 
 // MARK: - Loader
 
@@ -58,20 +61,36 @@ final class CrossRefLoader {
             await Task.yield()
 
             // Fill cards progressively
-            if let r = try? await modelService.analyzeContext(reference: ref, verseText: verseText) {
+            do {
+                let r = try await modelService.analyzeContext(reference: ref, verseText: verseText)
                 studyNote?.context = r.context
                 studyNote?.applications = r.applications
+                logger.info("Context+Applications loaded for \(ref.displayTitle)")
+            } catch {
+                logger.error("Context+Applications failed for \(ref.displayTitle): \(error)")
+                studyNote?.contextError = error.localizedDescription
             }
-            if let r = try? await modelService.analyzeHistory(reference: ref, verseText: verseText) {
+            do {
+                let r = try await modelService.analyzeHistory(reference: ref, verseText: verseText)
                 studyNote?.historicalBackground = r.historicalBackground
+                logger.info("Historical background loaded for \(ref.displayTitle)")
+            } catch {
+                logger.error("Historical background failed for \(ref.displayTitle): \(error)")
+                studyNote?.historyError = error.localizedDescription
             }
-            if !crossRefs.isEmpty,
-               let r = try? await modelService.analyzeCrossRefs(reference: ref, crossRefs: crossRefs) {
-                var refs = crossRefs
-                for i in refs.indices where i < r.crossRefExplanations.count {
-                    refs[i].explanation = r.crossRefExplanations[i]
+            if !crossRefs.isEmpty {
+                do {
+                    let r = try await modelService.analyzeCrossRefs(reference: ref, crossRefs: crossRefs)
+                    var refs = crossRefs
+                    for i in refs.indices where i < r.crossRefExplanations.count {
+                        refs[i].explanation = r.crossRefExplanations[i]
+                    }
+                    studyNote?.crossReferences = refs
+                    logger.info("Cross-references loaded for \(ref.displayTitle)")
+                } catch {
+                    logger.error("Cross-references failed for \(ref.displayTitle): \(error)")
+                    studyNote?.crossRefError = error.localizedDescription
                 }
-                studyNote?.crossReferences = refs
             }
             studyNote?.crossRefsLoaded = true
 
@@ -82,6 +101,56 @@ final class CrossRefLoader {
             isLoading = false
             self.error = .modelGenerationFailed(error.localizedDescription)
         }
+    }
+
+    func retryContext() async {
+        guard let note = studyNote else { return }
+        studyNote?.contextError = nil
+        studyNote?.context = ""
+        studyNote?.applications = []
+        if let r = try? await modelService.analyzeContext(reference: note.reference, verseText: note.verseText) {
+            studyNote?.context = r.context
+            studyNote?.applications = r.applications
+        } else {
+            studyNote?.contextError = "retry_failed"
+        }
+    }
+
+    func retryHistory() async {
+        guard let note = studyNote else { return }
+        studyNote?.historyError = nil
+        studyNote?.historicalBackground = ""
+        if let r = try? await modelService.analyzeHistory(reference: note.reference, verseText: note.verseText) {
+            studyNote?.historicalBackground = r.historicalBackground
+        } else {
+            studyNote?.historyError = "retry_failed"
+        }
+    }
+
+    func retryCrossRefs() async {
+        guard let note = studyNote else { return }
+        studyNote?.crossRefError = nil
+        studyNote?.crossRefsLoaded = false
+        let crossRefs = note.crossReferences.isEmpty
+            ? await tskService.fetchRefs(for: note.reference)
+            : note.crossReferences
+        guard !crossRefs.isEmpty else {
+            studyNote?.crossRefsLoaded = true
+            return
+        }
+        if studyNote?.crossReferences.isEmpty == true {
+            studyNote?.crossReferences = crossRefs
+        }
+        if let r = try? await modelService.analyzeCrossRefs(reference: note.reference, crossRefs: crossRefs) {
+            var refs = crossRefs
+            for i in refs.indices where i < r.crossRefExplanations.count {
+                refs[i].explanation = r.crossRefExplanations[i]
+            }
+            studyNote?.crossReferences = refs
+        } else {
+            studyNote?.crossRefError = "retry_failed"
+        }
+        studyNote?.crossRefsLoaded = true
     }
 }
 
@@ -107,7 +176,12 @@ struct CrossRefPassageView: View {
                     .buttonStyle(.borderedProminent)
                 }
             } else if let note = loader.studyNote {
-                StudyNoteView(note: note)
+                StudyNoteView(
+                    note: note,
+                    onRetryContext: { await loader.retryContext() },
+                    onRetryHistory: { await loader.retryHistory() },
+                    onRetryCrossRefs: { await loader.retryCrossRefs() }
+                )
             }
         }
         .navigationTitle(loader.studyNote?.reference.displayTitle ?? referenceString)

@@ -6,6 +6,9 @@
 
 import Foundation
 import FoundationModels
+import OSLog
+
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "BibleReference", category: "FoundationModelService")
 
 // MARK: - Guardrail detection helper
 
@@ -38,13 +41,21 @@ actor FoundationModelService {
         let session = LanguageModelSession(instructions: instructions)
         let prompt = basePrompt(reference: reference, verseText: verseText)
         do {
-            return try await session.respond(to: prompt, generating: ContextAndApplications.self).content
+            let result = try await session.respond(to: prompt, generating: ContextAndApplications.self).content
+            logger.debug("analyzeContext succeeded for \(reference.displayTitle): context=\(result.context.count) chars, applications=\(result.applications.count)")
+            guard !result.context.isEmpty else {
+                logger.error("analyzeContext returned empty context for \(reference.displayTitle) — treating as failure")
+                throw AppError.modelGenerationFailed("Model returned empty content for \(reference.displayTitle). The passage may be too long for the on-device model.")
+            }
+            return result
         } catch let error as LanguageModelSession.GenerationError where error.isGuardrail {
+            logger.warning("analyzeContext guardrail hit for \(reference.displayTitle), retrying with neutral prompt")
             return try await retry(
                 prompt: "Describe the literary context and key lessons of the ancient text \(reference.displayTitle).",
                 generating: ContextAndApplications.self
             )
         } catch {
+            logger.error("analyzeContext failed for \(reference.displayTitle): \(error)")
             throw AppError.modelGenerationFailed(error.localizedDescription)
         }
     }
@@ -62,13 +73,21 @@ actor FoundationModelService {
         let prompt = basePrompt(reference: reference, verseText: verseText)
             + "\n\nDescribe the historical and cultural setting of this text."
         do {
-            return try await session.respond(to: prompt, generating: HistoricalAnalysis.self).content
+            let result = try await session.respond(to: prompt, generating: HistoricalAnalysis.self).content
+            logger.debug("analyzeHistory succeeded for \(reference.displayTitle): \(result.historicalBackground.count) chars")
+            guard !result.historicalBackground.isEmpty else {
+                logger.error("analyzeHistory returned empty content for \(reference.displayTitle) — treating as failure")
+                throw AppError.modelGenerationFailed("Model returned empty content for \(reference.displayTitle).")
+            }
+            return result
         } catch let error as LanguageModelSession.GenerationError where error.isGuardrail {
+            logger.warning("analyzeHistory guardrail hit for \(reference.displayTitle), retrying")
             return try await retry(
                 prompt: "Describe the historical and cultural setting of the ancient text \(reference.displayTitle).",
                 generating: HistoricalAnalysis.self
             )
         } catch {
+            logger.error("analyzeHistory failed for \(reference.displayTitle): \(error)")
             throw AppError.modelGenerationFailed(error.localizedDescription)
         }
     }
@@ -89,13 +108,17 @@ actor FoundationModelService {
         let refList = crossRefs.map(\.reference).joined(separator: " | ")
         let prompt = "Text: \(reference.displayTitle)\n\nRelated passages to explain (in order): \(refList)"
         do {
-            return try await session.respond(to: prompt, generating: CrossRefAnalysis.self).content
+            let result = try await session.respond(to: prompt, generating: CrossRefAnalysis.self).content
+            logger.debug("analyzeCrossRefs succeeded for \(reference.displayTitle): \(result.crossRefExplanations.count) explanations")
+            return result
         } catch let error as LanguageModelSession.GenerationError where error.isGuardrail {
+            logger.warning("analyzeCrossRefs guardrail hit for \(reference.displayTitle), retrying")
             return try await retry(
                 prompt: "Briefly explain how each of these ancient texts relates to \(reference.displayTitle): \(refList)",
                 generating: CrossRefAnalysis.self
             )
         } catch {
+            logger.error("analyzeCrossRefs failed for \(reference.displayTitle): \(error)")
             throw AppError.modelGenerationFailed(error.localizedDescription)
         }
     }
@@ -122,9 +145,20 @@ actor FoundationModelService {
 
     // MARK: - Private helpers
 
+    // Conservative limit for the on-device model's small context window
+    private static let verseTextCharLimit = 3_000
+
     private func basePrompt(reference: BibleReference, verseText: String?) -> String {
         var parts = ["Text: \(reference.displayTitle)"]
-        if let text = verseText { parts.append("Content: \(text)") }
+        if let text = verseText {
+            if text.count > Self.verseTextCharLimit {
+                let truncated = String(text.prefix(Self.verseTextCharLimit))
+                logger.warning("verseText truncated from \(text.count) to \(Self.verseTextCharLimit) chars for \(reference.displayTitle)")
+                parts.append("Content (excerpt — passage is too long to include in full): \(truncated)…")
+            } else {
+                parts.append("Content: \(text)")
+            }
+        }
         return parts.joined(separator: "\n\n")
     }
 

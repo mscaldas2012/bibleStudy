@@ -9,6 +9,9 @@
 /// When the LLM provider layer is extracted as a library, this file stays in the app.
 
 import Foundation
+import OSLog
+
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "BibleReference", category: "BibleLLMAdapter")
 
 // MARK: - Private Codable mirrors of @Generable output types (for JSON decoding)
 // These are intentionally private — callers receive the app's @Generable types directly.
@@ -42,8 +45,14 @@ final class BibleLLMAdapter {
         verseText: String?
     ) async throws -> ContextAndApplications {
         let prompt = buildPrompt(reference: reference, verseText: verseText, instruction: Prompts.contextInstruction(for: reference))
+        logger.debug("analyzeContext prompt length: \(prompt.count) chars for \(reference.displayTitle)")
         let text = try await provider.chat(systemPrompt: Prompts.system, userPrompt: prompt)
+        logger.debug("analyzeContext raw response (\(text.count) chars): \(text.prefix(300))")
         let json = try parseProviderJSON(text, as: ContextJSON.self)
+        guard !json.context.isEmpty else {
+            logger.error("analyzeContext: parsed JSON has empty context for \(reference.displayTitle)")
+            throw LLMError.parseError
+        }
         return ContextAndApplications(context: json.context, applications: json.applications)
     }
 
@@ -52,8 +61,14 @@ final class BibleLLMAdapter {
         verseText: String?
     ) async throws -> HistoricalAnalysis {
         let prompt = buildPrompt(reference: reference, verseText: verseText, instruction: Prompts.historyInstruction)
+        logger.debug("analyzeHistory prompt length: \(prompt.count) chars for \(reference.displayTitle)")
         let text = try await provider.chat(systemPrompt: Prompts.system, userPrompt: prompt)
+        logger.debug("analyzeHistory raw response (\(text.count) chars): \(text.prefix(300))")
         let json = try parseProviderJSON(text, as: HistoryJSON.self)
+        guard !json.historicalBackground.isEmpty else {
+            logger.error("analyzeHistory: parsed JSON has empty historicalBackground for \(reference.displayTitle)")
+            throw LLMError.parseError
+        }
         return HistoricalAnalysis(historicalBackground: json.historicalBackground)
     }
 
@@ -72,12 +87,19 @@ final class BibleLLMAdapter {
             refList: refList,
             count: limited.count
         )
+        logger.debug("analyzeCrossRefs prompt length: \(prompt.count) chars for \(reference.displayTitle)")
         let text = try await provider.chat(systemPrompt: Prompts.system, userPrompt: prompt)
+        logger.debug("analyzeCrossRefs raw response (\(text.count) chars): \(text.prefix(300))")
         let json = try parseProviderJSON(text, as: CrossRefJSON.self)
         return CrossRefAnalysis(crossRefExplanations: json.crossRefExplanations)
     }
 
     // MARK: - Private helpers
+
+    // ~3 000 chars keeps the full prompt well inside Apple's ~4-6 k token window
+    // while still giving REST providers plenty of context. Long passages like
+    // Psalm 119 exceed this; the model knows the text from training data.
+    private static let verseTextCharLimit = 3_000
 
     private func buildPrompt(
         reference: BibleReference,
@@ -85,7 +107,15 @@ final class BibleLLMAdapter {
         instruction: String
     ) -> String {
         var parts = ["Passage: \(reference.displayTitle)"]
-        if let t = verseText { parts.append("Text: \(t)") }
+        if let t = verseText {
+            if t.count > Self.verseTextCharLimit {
+                let truncated = String(t.prefix(Self.verseTextCharLimit))
+                logger.warning("verseText truncated from \(t.count) to \(Self.verseTextCharLimit) chars for \(reference.displayTitle)")
+                parts.append("Text (excerpt — passage is too long to include in full): \(truncated)…")
+            } else {
+                parts.append("Text: \(t)")
+            }
+        }
         parts.append(instruction)
         return parts.joined(separator: "\n\n")
     }
