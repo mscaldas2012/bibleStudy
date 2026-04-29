@@ -59,10 +59,10 @@ struct SidebarView: View {
                         .buttonStyle(.plain)
                         .help("Browse books, chapters, and verses")
 
-                        // Microphone button (iOS only)
-                        #if !targetEnvironment(macCatalyst) && !os(macOS)
-                        MicButton()
-                        #endif
+                        // Microphone button (iOS only) — hidden for v1
+                        // #if !targetEnvironment(macCatalyst) && !os(macOS)
+                        // MicButton()
+                        // #endif
                     }
 
                     // Live transcript preview while recording
