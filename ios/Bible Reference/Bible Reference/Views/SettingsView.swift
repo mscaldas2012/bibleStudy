@@ -99,6 +99,17 @@ struct SettingsView: View {
                         }
                     }
                     .foregroundStyle(.primary)
+
+                    Link(destination: URL(string: "https://simplifylife2026.github.io/dailykairos")!) {
+                        HStack {
+                            Label("Help", systemImage: "questionmark.circle")
+                            Spacer()
+                            Image(systemName: "arrow.up.forward.square")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .foregroundStyle(.primary)
                 }
 
                 Section {

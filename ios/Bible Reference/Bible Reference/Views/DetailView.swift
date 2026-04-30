@@ -8,6 +8,7 @@ struct DetailView: View {
     @Environment(\.appColors) private var colors
     @ObservedObject private var fontSizeStore = FontSizeStore.shared
     @State private var showFontSize = false
+    @State private var showShare = false
 
     var body: some View {
         Group {
@@ -53,7 +54,15 @@ struct DetailView: View {
             CrossRefPassageView(referenceString: refString)
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if let note = viewModel.currentNote {
+                    Button { showShare.toggle() } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .popover(isPresented: $showShare, arrowEdge: .top) {
+                        ShareOptionsPopover(note: note)
+                    }
+                }
                 Button { showFontSize.toggle() } label: {
                     Image(systemName: "textformat.size")
                 }
@@ -99,6 +108,126 @@ private struct FontSizePopover: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .presentationCompactAdaptation(.popover)
+    }
+}
+
+// MARK: - Share options popover
+
+private struct ShareOptionsPopover: View {
+    let note: StudyNote
+    @Environment(\.appColors) private var colors
+
+    @State private var includeVerse = true
+    @State private var includeContext = true
+    @State private var includeApplications = true
+    @State private var includeHistory = true
+    @State private var includeCrossRefs = false
+
+    private var shareText: String {
+        var sections: [String] = []
+        let divider = String(repeating: "─", count: 32)
+
+        sections.append("📖  \(note.reference.displayTitle)")
+        sections.append(divider)
+
+        if includeVerse, let verseText = note.verseText {
+            sections.append(verseText)
+            sections.append(divider)
+        }
+
+        if includeContext, !note.context.isEmpty {
+            sections.append("CONTEXT\n\n\(note.context)")
+        }
+
+        if includeApplications, !note.applications.isEmpty {
+            let numbered = note.applications.enumerated()
+                .map { "\($0.offset + 1). \($0.element)" }
+                .joined(separator: "\n\n")
+            sections.append("APPLICATIONS\n\n\(numbered)")
+        }
+
+        if includeHistory, !note.historicalBackground.isEmpty {
+            sections.append("HISTORICAL BACKGROUND\n\n\(note.historicalBackground)")
+        }
+
+        if includeCrossRefs, !note.crossReferences.isEmpty {
+            let refs = note.crossReferences.map { ref in
+                ref.explanation.isEmpty
+                    ? "• \(ref.reference)"
+                    : "• \(ref.reference) — \(ref.explanation)"
+            }.joined(separator: "\n")
+            sections.append("CROSS-REFERENCES\n\n\(refs)")
+        }
+
+        sections.append(divider)
+        sections.append("Shared from Daily Kairos")
+        return sections.joined(separator: "\n\n")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Share Study Note")
+                .font(.headline)
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 14)
+
+            Divider()
+
+            VStack(spacing: 0) {
+                if note.verseText != nil {
+                    ShareToggleRow(label: "Verse Text", icon: "text.quote", isOn: $includeVerse)
+                    Divider().padding(.leading, 48)
+                }
+                ShareToggleRow(label: "Context", icon: "scroll", isOn: $includeContext)
+                Divider().padding(.leading, 48)
+                ShareToggleRow(label: "Applications", icon: "lightbulb", isOn: $includeApplications)
+                Divider().padding(.leading, 48)
+                ShareToggleRow(label: "Historical Background", icon: "building.columns", isOn: $includeHistory)
+                Divider().padding(.leading, 48)
+                ShareToggleRow(label: "Cross-References", icon: "link", isOn: $includeCrossRefs)
+            }
+
+            Divider()
+                .padding(.top, 4)
+
+            ShareLink(item: shareText) {
+                Label("Share", systemImage: "square.and.arrow.up")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(colors.accent)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+        }
+        .frame(minWidth: 300)
+        .presentationCompactAdaptation(.popover)
+    }
+}
+
+private struct ShareToggleRow: View {
+    let label: String
+    let icon: String
+    @Binding var isOn: Bool
+    @Environment(\.appColors) private var colors
+
+    var body: some View {
+        Button { isOn.toggle() } label: {
+            HStack {
+                Label(label, systemImage: icon)
+                    .font(.body)
+                    .foregroundStyle(isOn ? Color.primary : Color.secondary)
+                Spacer()
+                Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundStyle(isOn ? colors.accent : Color(.tertiaryLabel))
+                    .animation(.spring(duration: 0.2), value: isOn)
+            }
+            .contentShape(Rectangle())
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
     }
 }
 

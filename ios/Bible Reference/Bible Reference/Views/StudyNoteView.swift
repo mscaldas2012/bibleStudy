@@ -29,7 +29,7 @@ struct StudyNoteView: View {
                 StudyCard(
                     icon: "scroll",
                     title: "Context",
-                    accentColor: colors.accent,
+                    accentColor: .blue,
                     aiGenerated: true
                 ) {
                     if note.contextError != nil {
@@ -47,7 +47,7 @@ struct StudyNoteView: View {
                 StudyCard(
                     icon: "lightbulb",
                     title: "Applications",
-                    accentColor: colors.accent,
+                    accentColor: .orange,
                     aiGenerated: true
                 ) {
                     if note.contextError != nil {
@@ -60,10 +60,10 @@ struct StudyNoteView: View {
                                 HStack(alignment: .top, spacing: 12) {
                                     Text("\(idx + 1)")
                                         .studyFont(15, weight: .bold)
-                                        .foregroundStyle(colors.accent)
+                                        .foregroundStyle(.orange)
                                         .frame(width: 26, height: 26)
-                                        .overlay(Circle().stroke(colors.accent.opacity(0.5), lineWidth: 1.5))
-                                    SelectableText(text: app, lineSpacing: 4)
+                                        .overlay(Circle().stroke(Color.orange.opacity(0.5), lineWidth: 1.5))
+                                    SelectableText(text: app.strippingApplicationPrefix, lineSpacing: 4)
                                 }
                             }
                         }
@@ -262,7 +262,7 @@ private struct HistoricalBackgroundCard: View {
         StudyCard(
             icon: "building.columns",
             title: "Historical Background",
-            accentColor: colors.accentSecondary,
+            accentColor: .brown,
             aiGenerated: true
         ) {
             if error != nil {
@@ -401,5 +401,13 @@ private struct StudyScaledFontModifier: ViewModifier {
 private extension View {
     func studyFont(_ size: CGFloat, weight: Font.Weight = .regular) -> some View {
         modifier(StudyScaledFontModifier(size: size, weight: weight))
+    }
+}
+
+private extension String {
+    /// Strips AI-generated prefixes like "Application 1:", "Application 1.", "1." etc.
+    var strippingApplicationPrefix: String {
+        let pattern = /^(?:Application\s+)?\d+[.:)\-]?\s+/
+        return self.replacing(pattern, with: "")
     }
 }
