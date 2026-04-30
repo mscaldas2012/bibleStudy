@@ -10,6 +10,8 @@ notes/
 dist/
 build/
 .DS_Store
+.claude/
+.claire/
 
 # iOS
 ios/BibleStudy/BibleStudy/Resources/Secrets.plist
