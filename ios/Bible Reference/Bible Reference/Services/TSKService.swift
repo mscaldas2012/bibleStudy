@@ -12,9 +12,11 @@ struct CrossRef: Identifiable {
 }
 
 actor TSKService {
+    static let shared = TSKService()
+
     private var db: OpaquePointer?
 
-    init() {
+    private init() {
         guard let url = Bundle.main.url(forResource: "tsk", withExtension: "sqlite") else {
             return
         }

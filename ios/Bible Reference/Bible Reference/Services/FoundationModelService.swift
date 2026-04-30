@@ -22,6 +22,9 @@ private extension LanguageModelSession.GenerationError {
 
 actor FoundationModelService {
 
+    static let shared = FoundationModelService()
+    private init() {}
+
     // Neutral wording avoids triggering beta safety guardrails on religious content.
     private let instructions = """
         You are a knowledgeable assistant specializing in ancient literature, \

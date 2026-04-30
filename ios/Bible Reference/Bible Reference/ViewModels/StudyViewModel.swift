@@ -52,7 +52,7 @@ final class StudyViewModel {
     /// App-layer adapter that translates Bible study tasks to the active LLMProvider.
     /// Swap providers in Settings — this always reads the current one.
     private let bibleAI = BibleLLMAdapter()
-    private let tskService = TSKService()
+    private let tskService = TSKService.shared
 
     // MARK: - History helpers (cleared at start of each submit)
     private var pendingHistoryQuery: String = ""

@@ -22,7 +22,7 @@ final class StudyViewModel {
     // MARK: - Services
     private let speechService = SpeechService()
     private var esvService: ESVService?
-    private let modelService = FoundationModelService()
+    private let modelService = FoundationModelService.shared
 
     enum LoadingPhase {
         case idle, parsingReference, fetchingText, generatingInsights

@@ -20,8 +20,8 @@ final class CrossRefLoader {
     var isLoading = true    // true at init → loading view shows on first render
     var error: AppError?
 
-    private let tskService   = TSKService()
-    private let modelService = FoundationModelService()
+    private let tskService   = TSKService.shared
+    private let modelService = FoundationModelService.shared
 
     func load(referenceString: String) async {
         isLoading = true

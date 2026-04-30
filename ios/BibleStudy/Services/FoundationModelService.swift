@@ -7,6 +7,9 @@ import FoundationModels
 
 actor FoundationModelService {
 
+    static let shared = FoundationModelService()
+    private init() {}
+
     private let instructions = """
         You are a Bible study assistant with deep knowledge of Scripture, \
         biblical history, and Christian theology. When given a Bible reference \
