@@ -164,16 +164,16 @@ struct CrossRefPassageView: View {
         Group {
             if loader.isLoading {
                 LoadingView(phase: .generatingInsights)
-            } else if let error = loader.error {
-                ContentUnavailableView {
-                    Label("Could Not Load", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(error.localizedDescription)
-                } actions: {
-                    Button("Try Again") {
-                        Task { await loader.load(referenceString: referenceString) }
+            } else if loader.error != nil {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        StudyCard(icon: "book.closed", title: referenceString, accentColor: .accentColor) {
+                            AIErrorView {
+                                await loader.load(referenceString: referenceString)
+                            }
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .padding()
                 }
             } else if let note = loader.studyNote {
                 StudyNoteView(

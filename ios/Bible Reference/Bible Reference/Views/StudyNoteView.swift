@@ -216,7 +216,7 @@ private struct ESVKeyPromptCard: View {
 
 // MARK: - Generic study card
 
-private struct StudyCard<Content: View>: View {
+struct StudyCard<Content: View>: View {
     let icon: String
     let title: String
     let accentColor: Color
@@ -330,7 +330,7 @@ private struct CrossReferencesCard: View {
 
 // MARK: - Inline AI error
 
-private struct AIErrorView: View {
+struct AIErrorView: View {
     var onRetry: (() async -> Void)? = nil
     @State private var isRetrying = false
 
@@ -407,7 +407,7 @@ private extension View {
 private extension String {
     /// Strips AI-generated prefixes like "Application 1:", "Application 1.", "1." etc.
     var strippingApplicationPrefix: String {
-        let pattern = /^(?:Application\s+)?\d+[.:)\-]?\s+/
+        let pattern = /^(?:Application\s*\d*\s*[.:)\-]?\s*|\d+[.:)\-]\s*)/
         return self.replacing(pattern, with: "")
     }
 }
