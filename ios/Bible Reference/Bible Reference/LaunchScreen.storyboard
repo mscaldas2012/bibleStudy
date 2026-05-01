@@ -14,22 +14,8 @@
                     <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                        <subviews>
-                            <imageView contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="kEx-Qw-m5K">
-                                <rect key="frame" x="114.5" y="344" width="164" height="164"/>
-                                <image name="AppLogo"/>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="164" id="wid-Ab-1Kz"/>
-                                    <constraint firstAttribute="height" constant="164" id="hgt-Cd-2Lm"/>
-                                </constraints>
-                            </imageView>
-                        </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
                         <color key="backgroundColor" red="0.035" green="0.082" blue="0.090" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                        <constraints>
-                            <constraint firstItem="kEx-Qw-m5K" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cX1-Mn-3No"/>
-                            <constraint firstItem="kEx-Qw-m5K" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cY2-Op-4Pq"/>
-                        </constraints>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
