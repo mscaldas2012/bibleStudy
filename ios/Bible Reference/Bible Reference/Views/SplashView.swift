@@ -46,21 +46,9 @@ struct SplashView: View {
 
                 // Logo with thin halo ring
                 ZStack {
-                    Circle()
-                        .strokeBorder(
-                            AngularGradient(
-                                colors: [
-                                    goldMuted.opacity(0.0),
-                                    goldWarm.opacity(0.55),
-                                    goldMuted.opacity(0.08),
-                                    goldWarm.opacity(0.45),
-                                    goldMuted.opacity(0.0)
-                                ],
-                                center: .center
-                            ),
-                            lineWidth: 0.75
-                        )
-                        .frame(width: 228, height: 228)
+                    RoundedRectangle(cornerRadius: 28)
+                        .strokeBorder(goldWarm, lineWidth: 1.0)
+                        .frame(width: 192, height: 192)
                         .opacity(ringOpacity)
 
                     Image("AppLogo")
