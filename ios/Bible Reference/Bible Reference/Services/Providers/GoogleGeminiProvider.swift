@@ -22,6 +22,12 @@ struct GoogleGeminiProvider: LLMProvider {
             : config.baseURL
     }
 
+    // Ephemeral session prevents the ?key= query parameter from being written
+    // to the URL cache or appearing in URLSession debug logs.
+    private static let session: URLSession = {
+        URLSession(configuration: .ephemeral)
+    }()
+
     // Disable all safety filters — Gemini blocks religious/biblical content by default,
     // which causes the `content` field to be absent from the response and silently
     // fails every Bible study call.
@@ -53,7 +59,7 @@ struct GoogleGeminiProvider: LLMProvider {
         ]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, resp) = try await URLSession.shared.safeData(for: req)
+        let (data, resp) = try await GoogleGeminiProvider.session.safeData(for: req)
         let http = resp as! HTTPURLResponse
         guard http.statusCode == 200 else {
             let bodyStr = String(data: data, encoding: .utf8) ?? ""
@@ -115,7 +121,7 @@ struct GoogleGeminiProvider: LLMProvider {
     func fetchAvailableModels() async throws -> [String] {
         let urlStr = "\(baseURL)/v1beta/models?key=\(apiKey)"
         guard let url = URL(string: urlStr) else { return [] }
-        let (data, resp) = try await URLSession.shared.safeData(for: URLRequest(url: url, timeoutInterval: 20))
+        let (data, resp) = try await GoogleGeminiProvider.session.safeData(for: URLRequest(url: url, timeoutInterval: 20))
         guard (resp as? HTTPURLResponse)?.statusCode == 200 else { return [] }
         struct ModelList: Decodable {
             struct Model: Decodable {
