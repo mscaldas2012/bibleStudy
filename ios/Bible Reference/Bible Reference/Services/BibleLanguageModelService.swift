@@ -1,3 +1,5 @@
+/* Speech recognition disabled — entire file commented out.
+
 /// BibleLanguageModelService.swift
 /// Prepares and caches a custom SFSpeechRecognizer language model tuned for Bible references.
 /// Requires iOS 17+. Gracefully degrades on older OS versions.
@@ -196,3 +198,5 @@ actor BibleLanguageModelService {
         return (1...max).map { word($0) }
     }
 }
+
+*/ // end Speech recognition disabled

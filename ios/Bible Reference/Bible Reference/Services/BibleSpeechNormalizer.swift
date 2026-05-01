@@ -1,3 +1,5 @@
+/* Speech recognition disabled — entire file commented out.
+
 /// BibleSpeechNormalizer.swift
 /// Converts raw speech output to a parseable Bible reference string.
 ///
@@ -266,3 +268,5 @@ enum BibleSpeechNormalizer {
         return nil
     }
 }
+
+*/ // end Speech recognition disabled

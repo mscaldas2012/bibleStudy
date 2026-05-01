@@ -5,7 +5,7 @@
 import Foundation
 import Observation
 import OSLog
-import Speech
+// import Speech  // Speech recognition disabled
 
 private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "BibleReference", category: "StudyViewModel")
 
@@ -15,29 +15,30 @@ final class StudyViewModel {
     // MARK: - Input
     var referenceInput: String = ""
 
-    // MARK: - Speech
-    private let speechService = SpeechService()
+    // MARK: - Speech (disabled — recognition commented out)
 
-    var isSpeechRecording: Bool { speechService.isRecording }
-    var liveTranscript: String { speechService.transcript }
-    var speechPermission: SFSpeechRecognizerAuthorizationStatus { speechService.permissionStatus }
-    var isSpeechSupported: Bool { speechService.isSupported }
-
-    func requestSpeechPermission() async {
-        await speechService.requestPermission()
-        await speechService.prepareLanguageModel()
-    }
-
-    func toggleRecording() {
-        if speechService.isRecording {
-            speechService.stopRecording()
-            if !speechService.transcript.isEmpty {
-                referenceInput = speechService.transcript
-            }
-        } else {
-            try? speechService.startRecording()
-        }
-    }
+    // private let speechService = SpeechService()
+    //
+    // var isSpeechRecording: Bool { speechService.isRecording }
+    // var liveTranscript: String { speechService.transcript }
+    // var speechPermission: SFSpeechRecognizerAuthorizationStatus { speechService.permissionStatus }
+    // var isSpeechSupported: Bool { speechService.isSupported }
+    //
+    // func requestSpeechPermission() async {
+    //     await speechService.requestPermission()
+    //     await speechService.prepareLanguageModel()
+    // }
+    //
+    // func toggleRecording() {
+    //     if speechService.isRecording {
+    //         speechService.stopRecording()
+    //         if !speechService.transcript.isEmpty {
+    //             referenceInput = speechService.transcript
+    //         }
+    //     } else {
+    //         try? speechService.startRecording()
+    //     }
+    // }
 
     // MARK: - Output
     var currentNote: StudyNote?
