@@ -407,7 +407,7 @@ private extension View {
 private extension String {
     /// Strips AI-generated prefixes like "Application 1:", "Application 1.", "1." etc.
     var strippingApplicationPrefix: String {
-        let pattern = /^(?:Application\s*\d*\s*[.:)\-]?\s*|\d+[.:)\-]\s*)/
+        let pattern = /^(?:(?i)application\s*\d*\s*[.:)\-]?\s*|\d+[.:)\-]\s*)/
         return self.replacing(pattern, with: "")
     }
 }
