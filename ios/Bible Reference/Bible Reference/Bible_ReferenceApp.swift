@@ -16,9 +16,15 @@ struct Bible_ReferenceApp: App {
         Prompts.preload()
     }
 
+    // Same dark teal as SplashView's bgEdge — fills the window before the first
+    // SwiftUI frame paints, eliminating the black flash on cold launch.
+    private static let launchBackground = Color(red: 0.035, green: 0.082, blue: 0.090)
+
     var body: some Scene {
         WindowGroup {
             ZStack {
+                Self.launchBackground.ignoresSafeArea()
+
                 // ContentView loads in the background so it's ready when splash fades
                 ContentView(splashVisible: showSplash)
                     .opacity(showSplash ? 0 : 1)
