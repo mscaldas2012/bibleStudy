@@ -29,7 +29,7 @@ enum Prompts {
         Find the Bible passage reference(s) for this named topic or passage. \
         Return JSON exactly: {"references": ["Book Chapter:Verse-Verse"]}. \
         For synoptic parallels include all occurrences. Only references, no explanations.
-        Topic: \(topic)
+        <topic>\(topic)</topic>
         """
     }
 
