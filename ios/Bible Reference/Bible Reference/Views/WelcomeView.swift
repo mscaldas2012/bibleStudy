@@ -248,7 +248,7 @@ private struct AIProviderSetupCard: View {
 
 // MARK: - ESV setup card
 
-private let esvSignupURL = URL(string: "https://api.esv.org/login/?next=/account/create-application/")!
+private let esvSignupURL = URL(string: "https://simplifylife2026.github.io/dailykairos/setup-esv.html")!
 
 private struct ESVSetupCard: View {
     @Environment(\.appColors) private var colors
