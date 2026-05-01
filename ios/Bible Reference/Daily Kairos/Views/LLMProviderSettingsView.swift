@@ -11,11 +11,7 @@ struct LLMProviderSettingsView: View {
     @State private var editConfig: LLMProviderConfig? = nil
 
     private var appleIntelligenceAvailable: Bool {
-        #if targetEnvironment(simulator)
-        return false
-        #else
-        return SystemLanguageModel.default.isAvailable
-        #endif
+        SystemLanguageModel.default.isAvailable
     }
 
     var body: some View {
