@@ -21,7 +21,9 @@ struct OpenAIProvider: LLMProvider {
     }
 
     func chat(systemPrompt: String, userPrompt: String) async throws -> String {
-        let url = URL(string: "\(baseURL)/v1/chat/completions")!
+        guard let url = URL(string: "\(baseURL)/v1/chat/completions") else {
+            throw LLMError.httpError(0, "Invalid base URL: \(baseURL)")
+        }
         var req = URLRequest(url: url, timeoutInterval: 60)
         req.httpMethod = "POST"
         req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -73,7 +75,7 @@ struct OpenAIProvider: LLMProvider {
     // MARK: - Available models
 
     func fetchAvailableModels() async throws -> [String] {
-        let url = URL(string: "\(baseURL)/v1/models")!
+        guard let url = URL(string: "\(baseURL)/v1/models") else { return [] }
         var req = URLRequest(url: url, timeoutInterval: 20)
         req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         if !config.orgId.isEmpty {

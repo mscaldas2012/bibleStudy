@@ -5,7 +5,7 @@
 import Foundation
 import Observation
 import OSLog
-import Speech
+// import Speech  // Speech recognition disabled
 
 private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "BibleReference", category: "StudyViewModel")
 
@@ -15,29 +15,30 @@ final class StudyViewModel {
     // MARK: - Input
     var referenceInput: String = ""
 
-    // MARK: - Speech
-    private let speechService = SpeechService()
+    // MARK: - Speech (disabled — recognition commented out)
 
-    var isSpeechRecording: Bool { speechService.isRecording }
-    var liveTranscript: String { speechService.transcript }
-    var speechPermission: SFSpeechRecognizerAuthorizationStatus { speechService.permissionStatus }
-    var isSpeechSupported: Bool { speechService.isSupported }
-
-    func requestSpeechPermission() async {
-        await speechService.requestPermission()
-        await speechService.prepareLanguageModel()
-    }
-
-    func toggleRecording() {
-        if speechService.isRecording {
-            speechService.stopRecording()
-            if !speechService.transcript.isEmpty {
-                referenceInput = speechService.transcript
-            }
-        } else {
-            try? speechService.startRecording()
-        }
-    }
+    // private let speechService = SpeechService()
+    //
+    // var isSpeechRecording: Bool { speechService.isRecording }
+    // var liveTranscript: String { speechService.transcript }
+    // var speechPermission: SFSpeechRecognizerAuthorizationStatus { speechService.permissionStatus }
+    // var isSpeechSupported: Bool { speechService.isSupported }
+    //
+    // func requestSpeechPermission() async {
+    //     await speechService.requestPermission()
+    //     await speechService.prepareLanguageModel()
+    // }
+    //
+    // func toggleRecording() {
+    //     if speechService.isRecording {
+    //         speechService.stopRecording()
+    //         if !speechService.transcript.isEmpty {
+    //             referenceInput = speechService.transcript
+    //         }
+    //     } else {
+    //         try? speechService.startRecording()
+    //     }
+    // }
 
     // MARK: - Output
     var currentNote: StudyNote?
@@ -78,9 +79,16 @@ final class StudyViewModel {
     func submit() async {
         let trimmed = referenceInput.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        guard trimmed.lowercased() != lastLookedUpQuery else { return }
+        // Strip control characters (newlines, tabs, null bytes) — never valid in a
+        // Bible reference or topic name, and could embed extra instructions in LLM prompts.
+        let sanitized = trimmed.components(separatedBy: .controlCharacters).joined()
+        guard sanitized.count <= 200 else {
+            error = .parseFailure("Input too long — please keep it under 200 characters.")
+            return
+        }
+        guard sanitized.lowercased() != lastLookedUpQuery else { return }
 
-        let historyQuery = pendingHistoryQuery.isEmpty ? trimmed : pendingHistoryQuery
+        let historyQuery = pendingHistoryQuery.isEmpty ? sanitized : pendingHistoryQuery
         pendingHistoryQuery = ""
         pendingHistoryTitle = ""
 
@@ -88,20 +96,20 @@ final class StudyViewModel {
         isLoading = true
         currentNote = nil
         topicCandidates = []
-        lastLookedUpQuery = trimmed.lowercased()
+        lastLookedUpQuery = sanitized.lowercased()
 
         do {
             // 1. Parse reference — if it fails, resolve as a topic name via AI
             loadingPhase = .parsingReference
             let ref: BibleReference
             do {
-                ref = try parseBibleReference(trimmed)
+                ref = try parseBibleReference(sanitized)
             } catch {
                 loadingPhase = .resolvingTopic
-                let resolution = try await bibleAI.resolvePassage(topic: trimmed)
+                let resolution = try await bibleAI.resolvePassage(topic: sanitized)
                 let valid = resolution.references.filter { (try? parseBibleReference($0)) != nil }
                 if valid.isEmpty {
-                    throw AppError.parseFailure("Could not find a passage for \"\(trimmed)\". Try a direct reference like \"Luke 15:11-32\".")
+                    throw AppError.parseFailure("Could not find a passage for \"\(sanitized)\". Try a direct reference like \"Luke 15:11-32\".")
                 } else if valid.count == 1 {
                     ref = try parseBibleReference(valid[0])
                 } else {

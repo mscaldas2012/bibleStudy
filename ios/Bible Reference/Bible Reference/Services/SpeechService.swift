@@ -1,3 +1,5 @@
+/* Speech recognition disabled — entire file commented out.
+
 /// SpeechService.swift
 /// Wraps SFSpeechRecognizer for live transcription of Bible references.
 /// On iOS 17+, attaches a custom language model tuned for Bible reference patterns
@@ -131,3 +133,5 @@ final class SpeechService {
         #endif
     }
 }
+
+*/ // end Speech recognition disabled

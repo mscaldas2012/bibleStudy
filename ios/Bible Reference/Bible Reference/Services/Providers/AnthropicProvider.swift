@@ -18,7 +18,9 @@ struct AnthropicProvider: LLMProvider {
 
     func chat(systemPrompt: String, userPrompt: String) async throws -> String {
         let baseURL = config.baseURL.isEmpty ? "https://api.anthropic.com" : config.baseURL
-        let url = URL(string: "\(baseURL)/v1/messages")!
+        guard let url = URL(string: "\(baseURL)/v1/messages") else {
+            throw LLMError.httpError(0, "Invalid base URL: \(baseURL)")
+        }
         var req = URLRequest(url: url, timeoutInterval: 60)
         req.httpMethod = "POST"
         req.setValue(apiKey,        forHTTPHeaderField: "x-api-key")
@@ -69,7 +71,9 @@ struct AnthropicProvider: LLMProvider {
 
     func verify() async throws -> String {
         let baseURL = config.baseURL.isEmpty ? "https://api.anthropic.com" : config.baseURL
-        let url = URL(string: "\(baseURL)/v1/messages")!
+        guard let url = URL(string: "\(baseURL)/v1/messages") else {
+            throw LLMError.httpError(0, "Invalid base URL: \(baseURL)")
+        }
         var req = URLRequest(url: url, timeoutInterval: 30)
         req.httpMethod = "POST"
         req.setValue(apiKey,       forHTTPHeaderField: "x-api-key")

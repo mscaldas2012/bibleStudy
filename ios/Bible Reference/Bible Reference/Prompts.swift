@@ -29,7 +29,7 @@ enum Prompts {
         Find the Bible passage reference(s) for this named topic or passage. \
         Return JSON exactly: {"references": ["Book Chapter:Verse-Verse"]}. \
         For synoptic parallels include all occurrences. Only references, no explanations.
-        Topic: \(topic)
+        <topic>\(topic)</topic>
         """
     }
 
@@ -49,7 +49,7 @@ enum Prompts {
                 {"context": "2-3 sentences on the main theme of \(reference.book) chapter \(reference.chapterStart) \
                 as a whole — what the chapter is about, its key movement, and how verses \(reference.verseStart!)\
                 \(reference.verseEnd.map { "-\($0)" } ?? "") fit within that chapter", \
-                "applications": ["application 1", "application 2", "application 3"]}. \
+                "applications": ["...", "...", "..."]}. \
                 Exactly 3 applications, each 1-2 sentences, drawn directly from the selected verses.
                 """
         } else if isMultiChapter && reference.chapterStart > 1 {
@@ -61,7 +61,7 @@ enum Prompts {
                 {"context": "2-3 sentences summarizing \(reference.book) \(prevRange) — \
                 the narrative or argument immediately before the selected passage — \
                 so the reader understands what leads into \(reference.book) \(reference.chapterStart)–\(reference.chapterEnd)", \
-                "applications": ["application 1", "application 2", "application 3"]}. \
+                "applications": ["...", "...", "..."]}. \
                 Exactly 3 applications, each 1-2 sentences, drawn from the themes of the selected chapters.
                 """
         } else {
@@ -71,7 +71,7 @@ enum Prompts {
                 {"context": "2-3 sentences on the main theme of \(reference.book) \
                 chapter \(reference.chapterStart) — what it is about, its key movement, \
                 and how it fits within the broader book", \
-                "applications": ["application 1", "application 2", "application 3"]}. \
+                "applications": ["...", "...", "..."]}. \
                 Exactly 3 applications, each 1-2 sentences, directly grounded in the text.
                 """
         }

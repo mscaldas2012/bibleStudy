@@ -37,7 +37,9 @@ struct CustomProvider: LLMProvider {
 
     private func openAIChat(systemPrompt: String, userPrompt: String) async throws -> String {
         let base = config.baseURL.hasSuffix("/") ? String(config.baseURL.dropLast()) : config.baseURL
-        let url = URL(string: "\(base)/chat/completions")!
+        guard let url = URL(string: "\(base)/chat/completions") else {
+            throw LLMError.httpError(0, "Invalid base URL: \(base)")
+        }
         var req = URLRequest(url: url, timeoutInterval: 60)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "content-type")
@@ -71,7 +73,9 @@ struct CustomProvider: LLMProvider {
 
     private func anthropicChat(systemPrompt: String, userPrompt: String) async throws -> String {
         let base = config.baseURL.hasSuffix("/") ? String(config.baseURL.dropLast()) : config.baseURL
-        let url = URL(string: "\(base)/v1/messages")!
+        guard let url = URL(string: "\(base)/v1/messages") else {
+            throw LLMError.httpError(0, "Invalid base URL: \(base)")
+        }
         var req = URLRequest(url: url, timeoutInterval: 60)
         req.httpMethod = "POST"
         req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
@@ -98,7 +102,9 @@ struct CustomProvider: LLMProvider {
     private func googleChat(systemPrompt: String, userPrompt: String) async throws -> String {
         let base = config.baseURL.hasSuffix("/") ? String(config.baseURL.dropLast()) : config.baseURL
         let urlStr = "\(base)/v1beta/models/\(config.model):generateContent"
-        let url = URL(string: urlStr)!
+        guard let url = URL(string: urlStr) else {
+            throw LLMError.httpError(0, "Invalid base URL: \(base)")
+        }
         var req = URLRequest(url: url, timeoutInterval: 60)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "content-type")

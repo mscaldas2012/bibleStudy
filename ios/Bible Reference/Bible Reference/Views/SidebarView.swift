@@ -2,7 +2,7 @@
 /// Left panel: reference input with keyboard, Bible picker, and microphone support.
 
 import SwiftUI
-import Speech
+// import Speech  // Speech recognition disabled
 
 struct SidebarView: View {
     @Environment(StudyViewModel.self) private var viewModel
@@ -66,13 +66,13 @@ struct SidebarView: View {
                     }
 
                     // Live transcript preview while recording
-                    if viewModel.isSpeechRecording, !viewModel.liveTranscript.isEmpty {
-                        Text(viewModel.liveTranscript)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .italic()
-                            .transition(.opacity)
-                    }
+                    // if viewModel.isSpeechRecording, !viewModel.liveTranscript.isEmpty {
+                    //     Text(viewModel.liveTranscript)
+                    //         .font(.caption)
+                    //         .foregroundStyle(.secondary)
+                    //         .italic()
+                    //         .transition(.opacity)
+                    // }
                 }
 
                 // Submit button
@@ -129,37 +129,37 @@ struct SidebarView: View {
             BiblePickerView()
                 .presentationDetents([.large])
         }
-        #if !targetEnvironment(macCatalyst) && !os(macOS)
-        .task { await viewModel.requestSpeechPermission() }
-        #endif
+        // #if !targetEnvironment(macCatalyst) && !os(macOS)
+        // .task { await viewModel.requestSpeechPermission() }  // Speech recognition disabled
+        // #endif
     }
 }
 
-// MARK: - Mic button (iOS only)
+// MARK: - Mic button (iOS only) — disabled, speech recognition commented out
 
-#if !targetEnvironment(macCatalyst) && !os(macOS)
-private struct MicButton: View {
-    @Environment(StudyViewModel.self) private var viewModel
-
-    var body: some View {
-        Button {
-            viewModel.toggleRecording()
-        } label: {
-            Image(systemName: viewModel.isSpeechRecording ? "mic.fill" : "mic")
-                .font(.title3)
-                .foregroundStyle(viewModel.isSpeechRecording ? .red : .secondary)
-                .symbolEffect(.pulse, isActive: viewModel.isSpeechRecording)
-                .frame(width: 36, height: 36)
-                .background(.quaternary, in: .circle)
-        }
-        .buttonStyle(.plain)
-        .disabled(viewModel.speechPermission == .denied)
-        .help(viewModel.speechPermission == .denied
-              ? "Speech recognition denied — enable in Settings"
-              : "Tap to dictate a reference")
-    }
-}
-#endif
+// #if !targetEnvironment(macCatalyst) && !os(macOS)
+// private struct MicButton: View {
+//     @Environment(StudyViewModel.self) private var viewModel
+//
+//     var body: some View {
+//         Button {
+//             viewModel.toggleRecording()
+//         } label: {
+//             Image(systemName: viewModel.isSpeechRecording ? "mic.fill" : "mic")
+//                 .font(.title3)
+//                 .foregroundStyle(viewModel.isSpeechRecording ? .red : .secondary)
+//                 .symbolEffect(.pulse, isActive: viewModel.isSpeechRecording)
+//                 .frame(width: 36, height: 36)
+//                 .background(.quaternary, in: .circle)
+//         }
+//         .buttonStyle(.plain)
+//         .disabled(viewModel.speechPermission == .denied)
+//         .help(viewModel.speechPermission == .denied
+//               ? "Speech recognition denied — enable in Settings"
+//               : "Tap to dictate a reference")
+//     }
+// }
+// #endif
 
 // MARK: - Example group
 

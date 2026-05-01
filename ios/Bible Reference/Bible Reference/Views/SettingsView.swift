@@ -110,12 +110,26 @@ struct SettingsView: View {
                         }
                     }
                     .foregroundStyle(.primary)
+
+                    Link(destination: URL(string: "https://simplifylife2026.github.io/dailykairos/contact.html")!) {
+                        HStack {
+                            Label("Contact Us", systemImage: "envelope")
+                            Spacer()
+                            Image(systemName: "arrow.up.forward.square")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .foregroundStyle(.primary)
                 }
 
                 Section {
                     SecureField("Paste API key here", text: $apiKey)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
+                    Link(destination: URL(string: "https://simplifylife2026.github.io/dailykairos/setup-esv.html")!) {
+                        Label("ESV Setup Guide", systemImage: "questionmark.circle")
+                    }
                 } header: {
                     Text("ESV API Key")
                 } footer: {
