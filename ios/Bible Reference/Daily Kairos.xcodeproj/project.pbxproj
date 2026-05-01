@@ -24,15 +24,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		0C976D6E2F6CC84300AE682F /* Bible Reference.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Bible Reference.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		0C976D6E2F6CC84300AE682F /* Bible Reference.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Bible Reference.app"; path = "Daily Kairos.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C976D7D2F6CC84400AE682F /* Bible ReferenceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Bible ReferenceTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C976D872F6CC84400AE682F /* Bible ReferenceUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Bible ReferenceUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		0C976D702F6CC84300AE682F /* Bible Reference */ = {
+		0C976D702F6CC84300AE682F /* Daily Kairos */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Bible Reference";
+			path = "Daily Kairos";
 			sourceTree = "<group>";
 		};
 		0C976D802F6CC84400AE682F /* Bible ReferenceTests */ = {
@@ -75,7 +75,7 @@
 		0C976D652F6CC84300AE682F = {
 			isa = PBXGroup;
 			children = (
-				0C976D702F6CC84300AE682F /* Bible Reference */,
+				0C976D702F6CC84300AE682F /* Daily Kairos */,
 				0C976D802F6CC84400AE682F /* Bible ReferenceTests */,
 				0C976D8A2F6CC84400AE682F /* Bible ReferenceUITests */,
 				0C976D6F2F6CC84300AE682F /* Products */,
@@ -108,7 +108,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				0C976D702F6CC84300AE682F /* Bible Reference */,
+				0C976D702F6CC84300AE682F /* Daily Kairos */,
 			);
 			name = "Bible Reference";
 			packageProductDependencies = (
@@ -186,7 +186,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 0C976D692F6CC84300AE682F /* Build configuration list for PBXProject "Bible Reference" */;
+			buildConfigurationList = 0C976D692F6CC84300AE682F /* Build configuration list for PBXProject "Daily Kairos" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -411,10 +411,12 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = msc.simplifyLife.DailyKairos;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Daily Kairos";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -447,10 +449,12 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = msc.simplifyLife.DailyKairos;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Daily Kairos";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -543,7 +547,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0C976D692F6CC84300AE682F /* Build configuration list for PBXProject "Bible Reference" */ = {
+		0C976D692F6CC84300AE682F /* Build configuration list for PBXProject "Daily Kairos" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0C976D8F2F6CC84400AE682F /* Debug */,
