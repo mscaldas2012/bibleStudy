@@ -91,6 +91,11 @@ struct OpenAISetupView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Link(destination: URL(string: "https://simplifylife2026.github.io/dailykairos/setup-openai.html")!) {
+                        Image(systemName: "questionmark.circle")
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     if case .verifying = verifyState { ProgressView() }
                     else {

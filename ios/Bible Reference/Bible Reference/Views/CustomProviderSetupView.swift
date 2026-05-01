@@ -52,6 +52,11 @@ struct CustomProviderSetupView: View {
                     if step == 1 { Button("Cancel") { dismiss() } }
                     else { Button("Back") { step -= 1 } }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Link(destination: URL(string: "https://simplifylife2026.github.io/dailykairos/setup-custom.html")!) {
+                        Image(systemName: "questionmark.circle")
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     if step < 4 {
                         Button("Next") { step += 1 }

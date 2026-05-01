@@ -105,6 +105,11 @@ struct LLMProviderSettingsView: View {
             .navigationTitle("AI Provider")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Link(destination: URL(string: "https://simplifylife2026.github.io/dailykairos/setup-apple-intelligence.html")!) {
+                        Image(systemName: "questionmark.circle")
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
