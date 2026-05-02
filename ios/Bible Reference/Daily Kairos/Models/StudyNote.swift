@@ -55,4 +55,26 @@ struct StudyNote: Identifiable {
     var contextError: String?
     var historyError: String?
     var crossRefError: String?
+
+    var fullShareText: String {
+        let divider = String(repeating: "─", count: 32)
+        var sections: [String] = ["📖  \(reference.displayTitle)", divider]
+        if let verseText { sections.append(verseText); sections.append(divider) }
+        if !context.isEmpty { sections.append("CONTEXT\n\n\(context)") }
+        if !applications.isEmpty {
+            let numbered = applications.enumerated()
+                .map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n\n")
+            sections.append("APPLICATIONS\n\n\(numbered)")
+        }
+        if !historicalBackground.isEmpty { sections.append("HISTORICAL BACKGROUND\n\n\(historicalBackground)") }
+        if !crossReferences.isEmpty {
+            let refs = crossReferences.map { r in
+                r.explanation.isEmpty ? "• \(r.reference)" : "• \(r.reference) — \(r.explanation)"
+            }.joined(separator: "\n")
+            sections.append("CROSS-REFERENCES\n\n\(refs)")
+        }
+        sections.append(divider)
+        sections.append("Shared from Daily Kairos")
+        return sections.joined(separator: "\n\n")
+    }
 }
