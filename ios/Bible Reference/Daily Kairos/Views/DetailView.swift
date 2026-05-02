@@ -2,6 +2,9 @@
 /// Right panel: displays the study note or placeholder states.
 
 import SwiftUI
+#if targetEnvironment(macCatalyst)
+import UIKit
+#endif
 
 struct DetailView: View {
     @Environment(StudyViewModel.self) private var viewModel
@@ -9,6 +12,7 @@ struct DetailView: View {
     @ObservedObject private var fontSizeStore = FontSizeStore.shared
     @State private var showFontSize = false
     @State private var showShare = false
+    @State private var copyConfirmed = false
 
     var body: some View {
         Group {
@@ -56,12 +60,25 @@ struct DetailView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 if let note = viewModel.currentNote {
+                    #if targetEnvironment(macCatalyst)
+                    Button {
+                        UIPasteboard.general.string = note.fullShareText
+                        copyConfirmed = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copyConfirmed = false }
+                    } label: {
+                        Image(systemName: copyConfirmed ? "checkmark" : "doc.on.doc")
+                            .foregroundStyle(copyConfirmed ? .green : .primary)
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                    .help(copyConfirmed ? "Copied!" : "Copy study note to clipboard")
+                    #else
                     Button { showShare.toggle() } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
                     .popover(isPresented: $showShare, arrowEdge: .top) {
                         ShareOptionsPopover(note: note)
                     }
+                    #endif
                 }
                 Button { showFontSize.toggle() } label: {
                     Image(systemName: "textformat.size")
@@ -116,12 +133,14 @@ private struct FontSizePopover: View {
 private struct ShareOptionsPopover: View {
     let note: StudyNote
     @Environment(\.appColors) private var colors
+    @Environment(\.dismiss) private var dismiss
 
     @State private var includeVerse = true
     @State private var includeContext = true
     @State private var includeApplications = true
     @State private var includeHistory = true
     @State private var includeCrossRefs = false
+    @State private var copyConfirmed = false
 
     private var shareText: String {
         var sections: [String] = []
@@ -191,6 +210,21 @@ private struct ShareOptionsPopover: View {
             Divider()
                 .padding(.top, 4)
 
+            #if targetEnvironment(macCatalyst)
+            Button {
+                UIPasteboard.general.string = shareText
+                copyConfirmed = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { dismiss() }
+            } label: {
+                Label(copyConfirmed ? "Copied!" : "Copy to Clipboard",
+                      systemImage: copyConfirmed ? "checkmark" : "doc.on.doc")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(copyConfirmed ? .green : colors.accent)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            #else
             ShareLink(item: shareText) {
                 Label("Share", systemImage: "square.and.arrow.up")
                     .frame(maxWidth: .infinity)
@@ -199,6 +233,7 @@ private struct ShareOptionsPopover: View {
             .tint(colors.accent)
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
+            #endif
         }
         .frame(minWidth: 300)
         .presentationCompactAdaptation(.popover)

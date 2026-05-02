@@ -1,5 +1,5 @@
-SCHEME  = Bible Reference
-PROJECT = ios/Bible Reference/Bible Reference.xcodeproj
+SCHEME  = Daily Kairos
+PROJECT = ios/Bible Reference/Daily Kairos.xcodeproj
 BUILD   = .build/Build/Products/Debug-maccatalyst
 APP     = Daily Kairos.app
 
